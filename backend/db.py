@@ -75,12 +75,26 @@ class Database:
 
     def usage(self, run_id=None):
         where, args = ('WHERE run_id=?', (run_id,)) if run_id is not None else ('', ())
-        return dict(self.conn.execute(f"""SELECT count(*) AS requests,
+        result = dict(self.conn.execute(f"""SELECT count(*) AS requests,
             coalesce(sum(prompt_tokens),0) AS input_tokens,
             coalesce(sum(completion_tokens),0) AS output_tokens,
             coalesce(sum(total_tokens),0) AS total_tokens,
             coalesce(sum(total_tokens IS NULL),0) AS unknown_requests,
             min(created_at) AS since FROM ai_usage {where}""", args).fetchone())
+
+        # Reference estimate only: DeepSeek V4.1 Flash, uncached off-peak/peak.
+        # Do not silently apply these rates to other models or missing usage.
+        priced = self.conn.execute(f"""SELECT
+            coalesce(sum(CASE WHEN model='deepseek/deepseek-v4.1-flash'
+                AND prompt_tokens IS NOT NULL AND completion_tokens IS NOT NULL
+                THEN prompt_tokens * 0.15 / 1000000 + completion_tokens * 0.60 / 1000000 ELSE 0 END),0) AS usd,
+            coalesce(sum(CASE WHEN model='deepseek/deepseek-v4.1-flash'
+                AND prompt_tokens IS NOT NULL AND completion_tokens IS NOT NULL THEN 0 ELSE 1 END),0) AS excluded
+            FROM ai_usage {where}""", args).fetchone()
+        result['estimated_usd'] = priced['usd'] if priced['excluded'] < result['requests'] or not result['requests'] else None
+        result['estimated_peak_usd'] = result['estimated_usd'] * 2 if result['estimated_usd'] is not None else None
+        result['unpriced_requests'] = priced['excluded']
+        return result
 
     def phase(self, run_id, phase):
         if run_id is not None:

@@ -108,9 +108,9 @@
     "type": "rss",
     "url": "https://api.gdeltproject.org/api/v2/doc/doc?query=sourcelang:russian&mode=artlist&format=rss&maxrecords=50&timespan=1h&sort=datedesc",
     "fetch_articles": true,
-    "notes": "Все темы на русском языке: до 50 последних ссылок за час, не полный архив. Возможны HTTP 429 со стороны GDELT.",
+    "notes": "Отключён: постоянные HTTP 429. Исключён из автоматического сбора.",
     "max_items": 50,
-    "enabled": true,
+    "enabled": false,
     "name": "GDELT"
   },
   {

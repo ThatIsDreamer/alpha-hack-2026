@@ -181,3 +181,19 @@ def test_live_progress_distinguishes_inflight_from_queue(tmp_path, monkeypatch):
     assert progress['counts'] == dict(queued=0, running=0, completed=2, failed=1, interrupted=0)
     assert progress['items'][0]['topic'] == 'business'
     assert progress['items'][1]['topic'] is None
+
+
+def test_cost_estimate_uses_model_and_counts_unknown_usage(tmp_path):
+    db = Database(tmp_path / 'cost.sqlite3')
+    db.record_usage(1, 1, 'deepseek/deepseek-v4.1-flash',
+                    dict(prompt_tokens=362919, completion_tokens=7926, total_tokens=370845), False)
+    usage = db.usage(1)
+    assert usage['estimated_usd'] == pytest.approx(0.05919345)
+    assert usage['estimated_peak_usd'] == pytest.approx(0.1183869)
+    assert usage['unpriced_requests'] == 0
+    db.record_usage(2, 2, 'other-model', dict(prompt_tokens=100, completion_tokens=10, total_tokens=110), False)
+    db.record_usage(3, 2, 'deepseek/deepseek-v4.1-flash', None, True)
+    assert db.usage(2)['estimated_usd'] is None
+    assert db.usage()['unpriced_requests'] == 2
+    assert db.usage()['estimated_usd'] == usage['estimated_usd']
+    assert db.usage(3)['estimated_usd'] == 0
