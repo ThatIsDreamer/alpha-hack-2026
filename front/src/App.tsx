@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Link, NavLink, Route, Routes, useParams, useSearchParams, useNavigate, useLocation } from 'react-router'
 import './App.css'
+import BankMock from './BankMock'
 
 const labels: Record<string,string> = { politics: 'Политика', economy: 'Экономика', business: 'Бизнес', law: 'Право', society: 'Общество', technology: 'Технологии', science: 'Наука', health: 'Здоровье', environment: 'Экология', culture: 'Культура', sports: 'Спорт', other: 'Другое', none: 'Нет', low: 'Низкий', moderate: 'Умеренный', high: 'Высокий', unclear: 'Неясно' }
 const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -83,7 +84,7 @@ function Inbox() {
 function Article() {
   const { id } = useParams()
   const { data, error } = useData<News>(`/api/news/${id}`)
-  return <><Link className="back" to="/">← К публикациям</Link>{error ? <Notice text={error} /> : !data ? <Notice text="Загружаем материал…" /> : <article className="article-detail"><div className="story-meta"><Source item={data} /><span>{data.published_at ? date(data.published_at) : 'Дата не указана'}</span></div><h1>{data.title || 'Публикация в Telegram'}</h1><div className="labels"><span>{labels[data.topic || ''] || 'Тема не определена'}</span><span>{data.severity ? `Риск: ${labels[data.severity] || data.severity}` : 'Оценка не готова'}</span><a href={data.url} target="_blank" rel="noreferrer">Первоисточник ↗</a></div><div className="article-body">{data.text || 'Текст материала ещё не загружен.'}</div><p className="footnote">Оценка отражает репутационный риск для главного героя по содержанию статьи, а не подтверждённость обвинений.</p></article>}</>
+  return <><Link className="back" to="/news">← К публикациям</Link>{error ? <Notice text={error} /> : !data ? <Notice text="Загружаем материал…" /> : <article className="article-detail"><div className="story-meta"><Source item={data} /><span>{data.published_at ? date(data.published_at) : 'Дата не указана'}</span></div><h1>{data.title || 'Публикация в Telegram'}</h1><div className="labels"><span>{labels[data.topic || ''] || 'Тема не определена'}</span><span>{data.severity ? `Риск: ${labels[data.severity] || data.severity}` : 'Оценка не готова'}</span><a href={data.url} target="_blank" rel="noreferrer">Первоисточник ↗</a></div><div className="article-body">{data.text || 'Текст материала ещё не загружен.'}</div><p className="footnote">Оценка отражает репутационный риск для главного героя по содержанию статьи, а не подтверждённость обвинений.</p></article>}</>
 }
 function LabelingProgress({ run }: { run: Run }) {
   const progress = run.progress
@@ -109,6 +110,7 @@ function RouteFocus() {
   const { pathname } = useLocation()
   const previous = useRef(pathname)
   useEffect(() => {
+    document.title = pathname === '/' ? 'Альфа-Бизнес · Демо' : 'Обзор · Новости'
     if (previous.current === pathname) return
     previous.current = pathname
     window.scrollTo(0, 0)
@@ -117,5 +119,6 @@ function RouteFocus() {
   }, [pathname])
   return null
 }
-function App() { return <BrowserRouter><RouteFocus /><div className="app"><header><Link className="brand" to="/"><span className="brand-mark">n.</span>Обзор<span className="demo-tag">ДЕМО</span></Link><nav aria-label="Главная навигация"><NavLink to="/" end>Публикации</NavLink><NavLink to="/runs">Запуски</NavLink><a href={`${API}/docs`} target="_blank" rel="noreferrer">API ↗</a></nav></header><main tabIndex={-1}><Routes><Route path="/" element={<Inbox />} /><Route path="/news/:id" element={<Article />} /><Route path="/runs" element={<Runs />} /><Route path="*" element={<><h1>Страница не найдена.</h1><Link to="/">Вернуться к публикациям</Link></>} /></Routes></main><footer><span>Обзор / демо сбора новостей</span><span>Открытые источники · сбор каждый час</span></footer></div></BrowserRouter> }
+function NewsLayout() { return <div className="app"><header><Link className="brand" to="/"><span className="brand-mark">n.</span>Обзор<span className="demo-tag">ДЕМО</span></Link><nav aria-label="Главная навигация"><NavLink to="/news" end>Публикации</NavLink><NavLink to="/runs">Запуски</NavLink><a href={`${API}/docs`} target="_blank" rel="noreferrer">API ↗</a></nav></header><main tabIndex={-1}><Routes><Route path="/news" element={<Inbox />} /><Route path="/news/:id" element={<Article />} /><Route path="/runs" element={<Runs />} /><Route path="*" element={<><h1>Страница не найдена.</h1><Link to="/news">Вернуться к публикациям</Link></>} /></Routes></main><footer><span>Обзор / демо сбора новостей</span><span>Открытые источники · сбор каждый час</span></footer></div> }
+function App() { return <BrowserRouter><RouteFocus /><Routes><Route path="/" element={<BankMock />} /><Route path="*" element={<NewsLayout />} /></Routes></BrowserRouter> }
 export default App

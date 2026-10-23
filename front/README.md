@@ -1,6 +1,7 @@
 # Обзор — news demo
 
-React + TypeScript + React Router. Routes: `/` (inbox/source filter/pagination),
+React + TypeScript + React Router. Routes: `/` (Alfa-Business shell mock with static workspace skeletons),
+`/news` (inbox/source filter/pagination),
 `/news/:id` (article), `/runs` (live run history).
 
 ```sh
@@ -22,3 +23,7 @@ links and refreshes work on `/runs` and `/news/:id`.
 
 The public demo trigger classifies at most 5 articles when credentials exist and is globally limited to one run per five minutes.
 AI credentials stay on the API service and are never bundled into frontend assets.
+
+The mock uses Hugeicons and local shadcn-style Button, Skeleton, and Radix Dialog components.
+The Alfa logo in `src/assets/alfa-logo.png` was supplied by the user. Banking controls
+open demo notices; “Все сервисы” links to the live news inbox. No banking operations are implemented.
