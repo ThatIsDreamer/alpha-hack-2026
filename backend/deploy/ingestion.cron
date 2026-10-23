@@ -1,0 +1,2 @@
+# Replace /opt/alpha-hack-2026 with the checkout path on your runtime host.
+0 * * * * cd /opt/alpha-hack-2026 && /opt/alpha-hack-2026/.venv/bin/python -m backend.main >> /opt/alpha-hack-2026/backend/ingestion.log 2>&1

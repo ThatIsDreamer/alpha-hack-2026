@@ -1,0 +1,24 @@
+[
+  {
+    "id": "lenta",
+    "type": "rss",
+    "url": "https://lenta.ru/rss",
+    "fetch_articles": true,
+    "max_items": 50
+  },
+  {
+    "id": "kommersant",
+    "type": "rss",
+    "url": "https://www.kommersant.ru/RSS/main.xml",
+    "fetch_articles": true,
+    "max_items": 50
+  },
+  {
+    "id": "telegram-example",
+    "type": "telegram",
+    "channel": "rian_ru",
+    "max_pages": 2,
+    "enabled": false,
+    "max_items": 50
+  }
+]
