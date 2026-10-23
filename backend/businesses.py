@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .business_topics import migrate_categories, news_topics, VERSION as CATEGORY_VERSION
+from . import company_context
 
 from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel, Field, StrictStr
@@ -46,6 +47,7 @@ def connection(write=False):
 
 def migrate_onboarding(conn):
     migrate_categories(conn)
+    company_context.migrate(conn)
     conn.execute("""CREATE TABLE IF NOT EXISTS business_onboarding (
         business_id TEXT PRIMARY KEY, source_ids TEXT NOT NULL,
         completed_at TEXT NOT NULL, updated_at TEXT NOT NULL)""")
@@ -153,6 +155,10 @@ def import_dataset(target, seed=SEED):
                 if old.execute("SELECT 1 FROM sqlite_master WHERE name='business_onboarding'").fetchone():
                     conn.executemany('INSERT INTO business_onboarding VALUES (?,?,?,?)',
                                      old.execute('SELECT business_id,source_ids,completed_at,updated_at FROM business_onboarding'))
+                if old.execute("SELECT 1 FROM sqlite_master WHERE name='business_context'").fetchone():
+                    conn.executemany('''INSERT OR REPLACE INTO business_context
+                        (business_id,answers,version,confirmed_at,updated_at) VALUES (?,?,?,?,?)''',
+                        old.execute('SELECT business_id,answers,version,confirmed_at,updated_at FROM business_context'))
         conn.commit()
         conn.close()
         os.replace(temp, target)
@@ -197,7 +203,7 @@ def business_detail(business_id: str):
                 FROM payments p LEFT JOIN businesses b ON b.id=p.{counterparty} WHERE p.{own}=?''', (business_id,)).fetchone()
             flows[direction] = {'counterparties': data['counterparties'], 'amount_rub': data['amount']/100,
                 'payment_count': data['payment_count'], 'known_counterparty_turnover_share': data['known']/data['amount'] if data['amount'] else None}
-        return summary(row) | {
+        profile = summary(row) | {
             'onboarding': onboarding_state(conn, business_id),
             'group': {'id': group['id'], 'company_count': group['company_count'],
                       'revenue_rub': group['revenue_kopecks']/100 if group['revenue_kopecks'] is not None else None} if group else None,
@@ -212,6 +218,28 @@ def business_detail(business_id: str):
             'linked_people_count': conn.execute('SELECT count(*) FROM person_links WHERE business_id=?', (business_id,)).fetchone()[0],
             'raw_profile': raw, 'synthetic': True,
         }
+        profile['context'] = company_context.read(conn, profile)
+        return profile
+
+
+@router.get('/businesses/{business_id}/context')
+def get_context(business_id: str):
+    return business_detail(business_id)['context']
+
+
+@router.post('/businesses/{business_id}/context')
+def save_context(business_id: str, payload: company_context.ContextInput):
+    now = datetime.now(timezone.utc).isoformat()
+    answers = {key: getattr(payload, key) for key in company_context.FIELDS}
+    with connection(write=True) as conn, conn:
+        if not conn.execute('SELECT 1 FROM businesses WHERE id=?', (business_id,)).fetchone():
+            raise HTTPException(404, 'Компания не найдена')
+        updated = conn.execute('''UPDATE business_context SET answers=?,version=version+1,
+            confirmed_at=?,updated_at=? WHERE business_id=? AND version=?''',
+            (json.dumps(answers, ensure_ascii=False), now, now, business_id, payload.version))
+        if not updated.rowcount:
+            raise HTTPException(409, 'Контекст изменился в другой вкладке. Откройте его заново и повторите изменения.')
+    return get_context(business_id)
 
 
 class OnboardingInput(BaseModel):

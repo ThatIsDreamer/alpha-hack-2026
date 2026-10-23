@@ -4,3 +4,28 @@
 .business-onboarding .onboarding-sources{border:0;padding:0;margin:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.onboarding-source{display:flex;align-items:center;gap:12px;border:1px solid #e1e2e5;background:#fff;border-radius:12px;padding:18px 14px;cursor:pointer;min-width:0}.onboarding-source:hover{background:#fafafa}.onboarding-source.is-selected{border-color:#ef3124;background:#fff9f8}.onboarding-source input{margin:0;accent-color:#ef3124;width:16px;height:16px;flex-shrink:0}.onboarding-source>svg{color:#73767b;flex-shrink:0}.onboarding-source>span{min-width:0;display:flex;flex-direction:column;gap:5px}.onboarding-source strong{font-size:13px;font-weight:500;overflow-wrap:anywhere}.onboarding-source small{font-size:11px;line-height:1.4;color:#73767b}.onboarding-footer{display:flex;align-items:center;justify-content:space-between;gap:24px;margin-top:24px}.business-onboarding .onboarding-note{font-size:12px;color:#73767b;line-height:1.6;max-width:420px}.onboarding-actions{display:flex;justify-content:flex-end;gap:10px;flex-shrink:0}.bank-shell .onboarding-actions button{font-family:inherit;font-size:13px;height:42px;border:0;border-radius:10px;padding:0 18px}.bank-shell .onboarding-actions button:last-child{background:#ef3124;color:white}.bank-shell .onboarding-actions button:last-child:hover:enabled{background:#d92c20}.business-onboarding button:focus-visible,.business-onboarding input:focus-visible{outline:2px solid #ef3124;outline-offset:3px}.business-onboarding .onboarding-error{background:#fff4f3;border-radius:10px;padding:16px;margin-bottom:16px}.onboarding-error p{font-size:13px;color:#9d3028}.onboarding-error button{margin-top:10px;font-size:12px}.onboarding-status{color:#73767b;padding:24px 0}
 @media(max-width:1100px){.business-onboarding .onboarding-sources{grid-template-columns:repeat(2,minmax(0,1fr))}.onboarding-footer{align-items:flex-start;flex-direction:column;gap:16px}}
 @media(max-width:600px){.business-onboarding{padding-top:12px}.business-onboarding .onboarding-sources{grid-template-columns:1fr}.business-onboarding .onboarding-heading h1{font-size:26px}.onboarding-selection{gap:12px!important}.onboarding-footer{padding-bottom:40px}.onboarding-actions{width:100%}.onboarding-actions button:last-child{flex:1}}
+
+.company-context-form { max-width: 760px; }
+.context-facts { background: #fff; padding: 20px 24px; border-radius: 12px; font-size: 13px; }
+.context-facts summary { cursor: pointer; font-weight: 600; }
+.context-facts p { color: #52555b; line-height: 1.6; margin: 12px 0 16px; }
+.context-facts dl { display: block; margin: 0; }
+.context-facts dl > div { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; padding: 10px 0; border-top: 1px solid #e1e2e5; }
+.context-facts dt { color: #52555b; text-transform: none; font-size: 12px; }
+.context-facts dd { margin: 0; overflow-wrap: anywhere; font-size: 13px; line-height: 1.5; }
+.context-questions { display: grid; gap: 24px; padding: 0; border: 0; margin: 28px 0 0; }
+.context-questions label { display: grid; gap: 8px; font-size: 14px; }
+.context-questions label > span { font-weight: 600; }
+.context-questions small { font-size: 12px; color: #52555b; line-height: 1.6; }
+.context-questions textarea { box-sizing: border-box; width: 100%; min-height: 88px; resize: vertical; border: 1px solid #c4c6cb; border-radius: 10px; padding: 12px; background: #fff; color: #252629; font: inherit; line-height: 1.6; caret-color: #ef3124; }
+.context-questions textarea:hover { border-color: #73767b; }
+.context-questions textarea:focus-visible, .context-facts summary:focus-visible { outline: 2px solid #ef3124; outline-offset: 3px; }
+.context-questions textarea:disabled { opacity: .65; cursor: wait; }
+.company-context-form ::selection { background: #ffe1dd; color: #252629; }
+.company-context-form .onboarding-note { margin: 0; }
+.company-context-form .onboarding-note p { margin: 0 0 8px; }
+@media (max-width: 600px) {
+  .context-facts { padding: 18px; }
+  .context-facts dl > div { grid-template-columns: 1fr; gap: 4px; }
+  .onboarding-actions { flex-wrap: wrap; }
+}
