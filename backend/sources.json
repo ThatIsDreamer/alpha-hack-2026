@@ -28,5 +28,133 @@
     "max_pages": 2,
     "max_items": 50,
     "enabled": true
+  },
+  {
+    "id": "rbc",
+    "type": "rss",
+    "url": "https://rssexport.rbc.ru/rbcnews/news/30/full.rss",
+    "fetch_articles": false,
+    "max_items": 50,
+    "enabled": true,
+    "content_field": "rbc_news_full-text",
+    "notes": "Полный текст из расширения официальной RSS; отдельные страницы могут требовать авторизацию."
+  },
+  {
+    "id": "rosstat",
+    "type": "rss",
+    "url": "https://rosstat.gov.ru/folder/313/rss",
+    "fetch_articles": true,
+    "verify_tls": false,
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "moex",
+    "type": "rss",
+    "url": "https://www.moex.com/export/news.aspx?cat=100",
+    "fetch_articles": false,
+    "max_items": 50,
+    "enabled": true,
+    "notes": "Текст публикации из content:encoded официальной RSS."
+  },
+  {
+    "id": "cbr",
+    "type": "rss",
+    "url": "https://www.cbr.ru/rss/eventrss",
+    "fetch_articles": true,
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "pravo",
+    "type": "rss",
+    "url": "http://publication.pravo.gov.ru/api/Rss",
+    "fetch_articles": false,
+    "notes": "Официальная RSS-лента: название, номер и дата акта. Полный текст документов/PDF не извлекается. HTTPS недоступен, используется официальный HTTP endpoint.",
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "vedomosti",
+    "type": "rss",
+    "url": "https://www.vedomosti.ru/rss/news",
+    "fetch_articles": true,
+    "notes": "Только общедоступный текст; платные материалы могут быть неполными.",
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "worldbank-commodities",
+    "type": "website",
+    "url": "https://www.worldbank.org/en/research/commodity-markets/press-releases",
+    "link_selector": "a[href*=\"www.worldbank.org/en/news/press-release/\"]",
+    "notes": "Пресс-релизы Commodity Markets. Таблицы цен XLS и PDF-отчёты не импортируются.",
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "gdelt-russian",
+    "type": "rss",
+    "url": "https://api.gdeltproject.org/api/v2/doc/doc?query=sourcelang:russian&mode=artlist&format=rss&maxrecords=50&timespan=1h&sort=datedesc",
+    "fetch_articles": true,
+    "notes": "Все темы на русском языке: до 50 последних ссылок за час, не полный архив. Возможны HTTP 429 со стороны GDELT.",
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "telegram-bazabazon",
+    "type": "telegram",
+    "channel": "bazabazon",
+    "max_pages": 2,
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "telegram-forbesrussia",
+    "type": "telegram",
+    "channel": "forbesrussia",
+    "max_pages": 2,
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "telegram-b_retail",
+    "type": "telegram",
+    "channel": "b_retail",
+    "max_pages": 2,
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "telegram-svobodakassa",
+    "type": "telegram",
+    "channel": "svobodakassa",
+    "max_pages": 2,
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "telegram-domostroy_channel",
+    "type": "telegram",
+    "channel": "domostroy_channel",
+    "max_pages": 2,
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "telegram-centralbank_russia",
+    "type": "telegram",
+    "channel": "centralbank_russia",
+    "max_pages": 2,
+    "max_items": 50,
+    "enabled": true
+  },
+  {
+    "id": "telegram-banksta",
+    "type": "telegram",
+    "channel": "banksta",
+    "max_pages": 2,
+    "max_items": 50,
+    "enabled": true
   }
 ]

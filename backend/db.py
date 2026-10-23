@@ -37,8 +37,8 @@ class Database:
 
     def fetched(self, row_id, item):
         with self.conn:
-            self.conn.execute("UPDATE news SET text=?, metadata=?, status='pending_classification', attempts=0, last_error=NULL WHERE id=?",
-                              (item.text, json.dumps(item.metadata, ensure_ascii=False), row_id))
+            self.conn.execute("UPDATE news SET title=?, text=?, metadata=?, status='pending_classification', attempts=0, last_error=NULL WHERE id=?",
+                              (item.title, item.text, json.dumps(item.metadata, ensure_ascii=False), row_id))
 
     def failed(self, row_id, error):
         with self.conn:

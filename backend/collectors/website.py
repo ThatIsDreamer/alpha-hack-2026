@@ -13,7 +13,7 @@ class WebsiteCollector:
         self.source, self.client = source, client
 
     def discover(self):
-        response = fetch(self.client, self.source['url'])
+        response = fetch(self.client, self.source['url'], verify_tls=self.source.get('verify_tls', True))
         response.raise_for_status()
         soup = BeautifulSoup(response.text, 'html.parser')
         seen = set()
@@ -25,8 +25,12 @@ class WebsiteCollector:
             yield Item(url, url, title=link.get_text(' ', strip=True))
 
     def hydrate(self, item):
-        response = fetch(self.client, item.url)
+        response = fetch(self.client, item.url, verify_tls=self.source.get('verify_tls', True))
         response.raise_for_status()
+        if self.source.get('type') == 'website':
+            heading = BeautifulSoup(response.text, 'html.parser').find('h1')
+            if heading and heading.get_text(' ', strip=True):
+                item.title = heading.get_text(' ', strip=True)
         item.text = extract_article(response.text)
         if not item.text:
             raise ValueError('No article text extracted')

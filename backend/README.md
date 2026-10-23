@@ -137,3 +137,26 @@ origin plus http://localhost:5173. AI_API_KEY (or OPENAI_API_KEY), AI_BASE_URL a
 AI_MODEL enable scheduled classification; without credentials only text is collected.
 Frontend build variable: VITE_API_URL points to the public API domain. It is not a secret.
 The frontend Dockerfile builds Vite and serves SPA fallback routes with nginx on 8080.
+
+## Additional source coverage
+
+Configured once each: RBC, Rosstat, MOEX, Bank of Russia, official legal publications,
+Vedomosti, World Bank Commodity Markets press releases, and GDELT Russian-language
+coverage. Kommersant was already present and has not been duplicated. Added public
+Telegram channels: bazabazon, forbesrussia, b_retail, svobodakassa, domostroy_channel,
+centralbank_russia, banksta; bankrollo remains enabled. A website and its Telegram
+channel are separate origins; URL uniqueness still prevents identical article URLs
+from being stored twice across feeds.
+
+- All new sources have max_items=50; Telegram has max_pages=2.
+- RBC's `rbc_news_full-text` and MOEX's content:encoded supply text directly from RSS.
+- Rosstat alone has `verify_tls:false`, explicitly authorized for its certificate.
+  The opt-out uses a separate HTTP client; other sources retain TLS verification.
+- Pravo uses its working official HTTP RSS endpoint. Only publication metadata and
+  titles are ingested, not the full legal text or scanned PDFs.
+- World Bank covers commodity-market press releases, not XLS price series or PDF reports.
+- Vedomosti collection is limited to publicly accessible article text.
+- GDELT uses official DOC 2.0 RSS: sourcelang:russian, all topics, past hour, newest
+  first, maximum 50 links. It is a bounded sample, not exhaustive Russian coverage.
+  Live local verification returned HTTP 429; hourly runs retry discovery normally,
+  without immediate retry loops. A failed source does not stop other collectors.
