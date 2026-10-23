@@ -27,3 +27,5 @@ AI credentials stay on the API service and are never bundled into frontend asset
 The mock uses Hugeicons and local shadcn-style Button, Skeleton, and Radix Dialog components.
 The Alfa logo in `src/assets/alfa-logo.png` was supplied by the user. Banking controls
 open demo notices; “Все сервисы” links to the live news inbox. No banking operations are implemented.
+
+News, article details, and run history share the Alfa shell. `Newsroom.css` styles live content; banking actions and skeletons are limited to `/`.

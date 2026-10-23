@@ -1,6 +1,6 @@
 ---
 name: Alfa shell and news demo
-description: Route-specific Alfa reference shell alongside the preserved news interface.
+description: Shared Alfa shell with an integrated live newsroom.
 colors:
   news-background: "#ffffff"
   news-text: "#202020"
@@ -22,13 +22,13 @@ colors:
   alfa-chat: "#202123"
 typography:
   news-heading:
-    fontFamily: "Manrope, sans-serif"
+    fontFamily: "Arial, Helvetica, sans-serif"
     fontSize: "40px"
     fontWeight: 600
     lineHeight: 1.17
     letterSpacing: "-.035em"
   news-body:
-    fontFamily: "'DM Sans', sans-serif"
+    fontFamily: "Arial, Helvetica, sans-serif"
     fontWeight: 400
     lineHeight: 1.5
   alfa-body:
@@ -89,12 +89,12 @@ components:
 
 ## Overview
 
-Two route-specific visual systems coexist. The existing news interface on `/news`, `/news/:id`, and `/runs` keeps its minimal white canvas, neutral typography, sparse accent, Russian interface, and original-language source text. Its established design is preserved.
+One Alfa layout now contains `/`, `/news`, `/news/:id`, and `/runs`. The newsroom is an MVP tab within the banking website, with live data, Russian controls, and original-language source text.
 
-The approved `/` surface reproduces the user-supplied Alfa-Business screenshot: compact Russian banking chrome surrounding a completely static skeleton workspace. The screenshot and explicit current Russian instructions take precedence over the older English-interface assumption in PRODUCT.md. This is a scoped reference reproduction, not a replacement identity for the news product.
+The approved `/` surface reproduces the user-supplied Alfa-Business screenshot: compact Russian banking chrome surrounding a completely static skeleton workspace. The screenshot and explicit current Russian instructions take precedence over the older English-interface assumption in PRODUCT.md. The user subsequently approved extending this identity to all newsroom routes.
 
 **Key Characteristics:**
-- Preserve the news system independently of the Alfa shell.
+- Keep the header and sidebar shared across all routes.
 - Reproduce the supplied header, sidebar, and action buttons on `/`.
 - Use quiet tonal placeholders throughout the banking workspace.
 
@@ -102,19 +102,19 @@ The approved `/` surface reproduces the user-supplied Alfa-Business screenshot: 
 
 News tokens retain their existing roles: white canvas, dark text, gray secondary text and dividers, blue source-link accent. Status colors remain reserved for run states.
 
-Alfa tokens apply only to `/` and its demo dialog: cool gray canvas, dark compact labels, white actions, pale nested panels, and slightly darker skeleton blocks. Red identifies keyboard focus and the supplied Alfa identity; blue identifies the new navigation badge. Small company marks retain the source's distinct colors without creating a new product-wide accent palette.
+Alfa tokens apply to all routes and the demo dialog: cool gray canvas, dark compact labels, white actions, pale nested panels, and slightly darker skeleton blocks. Red identifies keyboard focus and the supplied Alfa identity; blue identifies the new navigation badge. Small company marks retain the source's distinct colors without creating a new product-wide accent palette.
 
-**The Route Boundary Rule.** Alfa tokens must not restyle `/news`, `/news/:id`, or `/runs`.
+**The Shared Layout Rule.** News routes use the same Alfa header, sidebar, logo, typography and icon library. The banking action row and skeleton workspace appear only at `/`.
 
 ## Typography
 
-News retains Manrope headings and DM Sans body text with sans-serif fallbacks. Existing heading, article, metric, and status treatments remain intact.
+News uses Arial/Helvetica with 30px page headings, 17px story headings, 13px excerpts, and 11px metadata. Article text is 15px with 1.85 line height.
 
-Alfa uses the Arial/Helvetica stack evidenced in BankMock.css for this reference reproduction only. Navigation is compact; action labels are larger. The brand is 14px at weight 600, company labels 12px, secondary company text 10px, and the demo caption 11px. Do not promote this screenshot-specific stack into a new display-font recommendation for other surfaces.
+Alfa uses the Arial/Helvetica stack evidenced in BankMock.css across the shared application. Navigation is compact; action labels are larger. The brand is 14px at weight 600, company labels 12px, secondary company text 10px, and the demo caption 11px. Do not promote this screenshot-specific stack into a new display-font recommendation for other surfaces.
 
 ## Layout
 
-News retains its 1320px maximum content width, desktop side gutters, header navigation, and flat bordered story rows. At 700px and below it uses the existing mobile gutters and stacked layout.
+News inherits the sidebar gutters. Content uses white 15px-radius cards on the gray canvas, with publication/run-history tabs above it. Four summary tiles become two columns below 1000px. Filters become a two-column grid on mobile, with source spanning both columns.
 
 At the 1280×720 reference size, Alfa has a 48px header, fixed 200px sidebar beginning below the header, and main content beginning at x=240px with 42px right padding. The action row starts at y=58px, is 38px high, and leaves 26px before the summary. The summary starts at y=122px, is 372px tall, and uses columns `2.05fr 1fr .98fr`. Lower panels use `2.08fr 1fr 1fr`; settings stay at the sidebar bottom and chat at the viewport bottom-right. Skeleton tabs begin at y=525px and lower panels at y=577px, as derived from current CSS rather than the earlier planned coordinates.
 
@@ -122,11 +122,11 @@ At 1100px and below, main content starts at 220px, right padding becomes 24px, s
 
 ## Elevation & Depth
 
-News stays flat with bordered rows. Alfa uses tonal nesting and rounded panels, without shadows on ordinary buttons. The floating chat alone has `0 4px 12px #0002`. The demo dialog uses a dim overlay (`#10111666`); the mobile menu backdrop uses `#0004`. These are local overlay treatments.
+News uses flat white cards with no shadows. Alfa uses tonal nesting and rounded panels, without shadows on ordinary buttons. The floating chat alone has `0 4px 12px #0002`. The demo dialog uses a dim overlay (`#10111666`); the mobile menu backdrop uses `#0004`. These are local overlay treatments.
 
 ## Shapes
 
-Alfa uses rounded rectangular actions, nested summary panels, smaller skeleton bars, and circular avatars/chat indicators. The summary radius becomes 17px on mobile. Lower cards use their own radius; the dialog uses 18px. News keeps its existing restrained button, selector, label, and status shapes.
+Alfa uses rounded rectangular actions, nested summary panels, smaller skeleton bars, and circular avatars/chat indicators. The summary radius becomes 17px on mobile. Lower cards use their own radius; the dialog uses 18px. News selectors use 10px radii and 42px height; labels use 5px radii. The collection action uses Alfa red.
 
 ## Components
 
@@ -150,13 +150,13 @@ Summary, tabs, applications, conversions, and promotional areas are placeholders
 
 ### Existing news components
 
-Preserve header navigation, flat story rows, native selectors, black primary actions, source links, visible keyboard focus, and existing run status treatments. No animation or decorative imagery is added to news routes.
+Preserve filtering, pagination, article links, collection, token costs and run progress. Use Hugeicons for Telegram/RSS/web sources, navigation, collection and external links. The active newsroom sidebar row has a gray fill; subnavigation uses a red underline. No animation or decorative imagery is added.
 
 ## Do's and Don'ts
 
-- Do keep Alfa rules scoped to the root route and its demo overlays.
+- Do share Alfa chrome across root and newsroom routes.
 - Do preserve the supplied Alfa PNG and the screenshot's shell hierarchy.
 - Do keep Ньюсрум linked to `/news` with НОВОЕ, and Заявки without the badge.
-- Do preserve the existing news and run-history design.
+- Do preserve news and run-history functionality inside the shared design.
 - Don't turn static placeholders into simulated live banking content.
 - Don't treat static-mock review approval as approval for real banking operations.

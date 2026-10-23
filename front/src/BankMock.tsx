@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Add01Icon, ArrowRight01Icon, Cancel01Icon, Contact01Icon, CreditCardIcon, DashboardSquareAddIcon, DocumentValidationIcon, File01Icon, FileAttachmentIcon, FileDownloadIcon, FileImportIcon, Invoice01Icon, Logout03Icon, Mail01Icon, Menu01Icon, Message01Icon, Notification03Icon, ReceiptDollarIcon, Settings01Icon, Task01Icon, TimeQuarterPassIcon, TransactionHistoryIcon, UserGroupIcon, Wallet01Icon } from '@hugeicons/core-free-icons'
@@ -46,7 +46,7 @@ function MockWorkspace() {
     <p className="bank-mock-caption">Демонстрационный макет</p>
   </div>
 }
-export default function BankMock() {
+export default function BankMock({ children }: { children?: ReactNode }) {
   const [dialog, setDialog] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   function show(title: string) { setDialog(title); setMenuOpen(false) }
@@ -68,13 +68,14 @@ export default function BankMock() {
     {menuOpen && <button className="bank-mobile-backdrop" aria-label="Закрыть меню" onClick={() => setMenuOpen(false)} />}
     <aside className={`bank-sidebar ${menuOpen ? 'is-open' : ''}`} id="bank-sidebar">
       <Button variant="ghost" className="bank-all-services" onClick={() => show('Все сервисы')}><Icon icon={DashboardSquareAddIcon} size={19} />Все сервисы</Button>
-      <nav aria-label="Банковские сервисы" className="bank-navigation"><Button asChild variant="ghost" className="bank-nav-item"><Link to="/news"><Icon icon={File01Icon} size={17} /><span>Ньюсрум</span><span className="bank-new-badge">НОВОЕ</span></Link></Button>{navigation.map(item => <Button key={item.text} variant="ghost" className="bank-nav-item" onClick={() => show(item.text)}><Icon icon={item.icon} size={17} /><span>{item.text}</span></Button>)}<div className="bank-nav-separator" /><Button variant="ghost" className="bank-nav-item bank-procurement" onClick={() => show('Госзакупки')}><Icon icon={ReceiptDollarIcon} size={19} /><span>Госзакупки</span></Button></nav>
+      <nav aria-label="Банковские сервисы" className="bank-navigation"><Button asChild variant="ghost" className="bank-nav-item"><Link to="/news" aria-current={children ? "page" : undefined} onClick={() => setMenuOpen(false)}><Icon icon={File01Icon} size={17} /><span>Ньюсрум</span><span className="bank-new-badge">НОВОЕ</span></Link></Button>{navigation.map(item => <Button key={item.text} variant="ghost" className="bank-nav-item" onClick={() => show(item.text)}><Icon icon={item.icon} size={17} /><span>{item.text}</span></Button>)}<div className="bank-nav-separator" /><Button variant="ghost" className="bank-nav-item bank-procurement" onClick={() => show('Госзакупки')}><Icon icon={ReceiptDollarIcon} size={19} /><span>Госзакупки</span></Button></nav>
       <Button variant="ghost" className="bank-menu-settings" onClick={() => show('Настроить меню')}><Icon icon={Settings01Icon} size={17} />Настроить меню</Button>
     </aside>
-    <main className="bank-main" id="bank-main" tabIndex={-1}>
-      <h1 className="bank-sr-only">Альфа-Бизнес — демонстрационный макет</h1>
+    <main className={`bank-main ${children ? 'bank-news-main' : ''}`} id="bank-main" tabIndex={-1}>
+      {!children && <><h1 className="bank-sr-only">Альфа-Бизнес — демонстрационный макет</h1>
       <div className="bank-actions"><Button className="bank-action" variant="secondary" onClick={() => show('Скачать выписку')}><Icon icon={FileDownloadIcon} />Скачать выписку</Button><Button className="bank-action" variant="secondary" onClick={() => show('Импорт платежей')}><Icon icon={FileImportIcon} />Импорт платежей</Button><Button className="bank-action" variant="secondary" onClick={() => show('Создать платёж')}><Icon icon={DocumentValidationIcon} />Создать платёж</Button><Button className="bank-action bank-more" variant="secondary" onClick={() => show('Ещё')}>Ещё</Button></div>
-      <MockWorkspace />
+      <MockWorkspace /></>}
+      {children}
     </main>
     <Button className="bank-chat" size="icon" aria-label="Чат поддержки — одно уведомление" onClick={() => show('Чат поддержки')}><Icon icon={Message01Icon} size={25} /><span>1</span></Button>
     <Dialog open={!!dialog} onOpenChange={open => { if (!open) setDialog('') }}><DialogContent><DialogTitle>{dialog}</DialogTitle><DialogDescription>Это демонстрационный макет. Банковские операции недоступны.</DialogDescription>{dialog === 'Все сервисы' && <Link className="bank-news-link" to="/news"><Icon icon={File01Icon} />Обзор новостей<Icon icon={ArrowRight01Icon} /></Link>}<DialogClose asChild><Button className="bank-dialog-close" variant="secondary">Понятно</Button></DialogClose></DialogContent></Dialog>
