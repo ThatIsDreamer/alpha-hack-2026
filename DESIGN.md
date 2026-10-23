@@ -174,3 +174,14 @@ Motion for React animates the panel as one unit: 160ms ease-out, opacity plus
 5px vertical travel and scale from .985. Reduced motion uses 100ms opacity only.
 Escape/outside interaction closes it; focus starts in search and returns to the
 trigger on dismissal. Keep loading, empty, retry, clear-selection and pagination states.
+
+### Company onboarding workspace
+
+For a selected company with incomplete onboarding, replace the main route's
+content with a source-selection workspace. Keep the shared Alfa header and
+sidebar; never use a popup or a dismiss/skip action for first-time onboarding.
+Use a 30px heading, the company ID, a native checkbox grid (3/2/1 columns),
+Hugeicons source icons, and the shared red primary action. A successful save
+reveals the requested route. Completed companies can edit preferences inline
+through the company selector and cancel an edit. Loading/errors stay inside
+the workspace; only successful persistence marks onboarding complete.

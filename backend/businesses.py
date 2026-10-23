@@ -10,9 +10,11 @@ import os
 import sqlite3
 from contextlib import contextmanager
 from decimal import Decimal
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Header, HTTPException, Query
+from pydantic import BaseModel, Field, StrictStr
 
 SEED = Path(__file__).parent / 'business_seed'
 FILES = ('df_Uid_data_hack.csv.gz', 'df_Uid_payment_hack.csv.gz', 'df_Fid_Uid_link_hack.csv.gz')
@@ -30,13 +32,34 @@ def db_path():
 
 
 @contextmanager
-def connection():
-    conn = sqlite3.connect(f'{db_path().resolve().as_uri()}?mode=ro', uri=True)
+def connection(write=False):
+    mode = 'rw' if write else 'ro'
+    conn = sqlite3.connect(f'{db_path().resolve().as_uri()}?mode={mode}', uri=True, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
         yield conn
     finally:
         conn.close()
+
+
+def migrate_onboarding(conn):
+    conn.execute("""CREATE TABLE IF NOT EXISTS business_onboarding (
+        business_id TEXT PRIMARY KEY, source_ids TEXT NOT NULL,
+        completed_at TEXT NOT NULL, updated_at TEXT NOT NULL)""")
+
+
+def source_catalog():
+    return [{'id': s['id'], 'name': s.get('name', s['id']), 'type': s['type'],
+             'enabled': s.get('enabled', True)}
+            for s in json.loads((Path(__file__).parent / 'sources.json').read_text())]
+
+
+def onboarding_state(conn, business_id):
+    row = conn.execute('SELECT * FROM business_onboarding WHERE business_id=?', (business_id,)).fetchone()
+    return {'business_id': business_id, 'completed': row is not None,
+            'source_ids': json.loads(row['source_ids']) if row else [],
+            'completed_at': row['completed_at'] if row else None,
+            'updated_at': row['updated_at'] if row else None}
 
 
 def rows(path):
@@ -73,6 +96,7 @@ def import_dataset(target, seed=SEED):
         with sqlite3.connect(target) as old:
             if old.execute("SELECT 1 FROM sqlite_master WHERE name='dataset_meta'").fetchone():
                 if old.execute('SELECT version FROM dataset_meta').fetchone() == (version,):
+                    migrate_onboarding(old)
                     return
     temp = target.with_name(target.name + '.importing')
     temp.unlink(missing_ok=True)
@@ -119,6 +143,14 @@ def import_dataset(target, seed=SEED):
         CREATE UNIQUE INDEX group_id ON business_groups(id);
         ANALYZE;
         ''')
+        # Mutable onboarding data must survive every seed replacement.
+        migrate_onboarding(conn)
+        if target.exists():
+            with sqlite3.connect(target) as old:
+                if old.execute("SELECT 1 FROM sqlite_master WHERE name='business_onboarding'").fetchone():
+                    conn.executemany('INSERT INTO business_onboarding VALUES (?,?,?,?)',
+                                     old.execute('SELECT business_id,source_ids,completed_at,updated_at FROM business_onboarding'))
+        conn.commit()
         conn.close()
         os.replace(temp, target)
     except BaseException:
@@ -162,6 +194,7 @@ def business_detail(business_id: str):
             flows[direction] = {'counterparties': data['counterparties'], 'amount_rub': data['amount']/100,
                 'payment_count': data['payment_count'], 'known_counterparty_turnover_share': data['known']/data['amount'] if data['amount'] else None}
         return summary(row) | {
+            'onboarding': onboarding_state(conn, business_id),
             'group': {'id': group['id'], 'company_count': group['company_count'],
                       'revenue_rub': group['revenue_kopecks']/100 if group['revenue_kopecks'] is not None else None} if group else None,
             'age_range': raw['COMPANY_AGE_YEARS_GRADATION'] or None,
@@ -175,6 +208,34 @@ def business_detail(business_id: str):
             'linked_people_count': conn.execute('SELECT count(*) FROM person_links WHERE business_id=?', (business_id,)).fetchone()[0],
             'raw_profile': raw, 'synthetic': True,
         }
+
+
+class OnboardingInput(BaseModel):
+    source_ids: list[StrictStr] = Field(min_length=1, max_length=100)
+
+
+@router.get('/businesses/{business_id}/onboarding')
+def get_onboarding(business_id: str):
+    with connection() as conn:
+        if not conn.execute('SELECT 1 FROM businesses WHERE id=?', (business_id,)).fetchone():
+            raise HTTPException(404, 'Компания не найдена')
+        return onboarding_state(conn, business_id) | {'sources': source_catalog()}
+
+
+@router.post('/businesses/{business_id}/onboarding')
+def save_onboarding(business_id: str, payload: OnboardingInput):
+    sources = sorted(set(payload.source_ids))
+    catalog = {s['id'] for s in source_catalog()}
+    if any(source not in catalog for source in sources):
+        raise HTTPException(422, 'Неизвестный источник новостей')
+    now = datetime.now(timezone.utc).isoformat()
+    with connection(write=True) as conn, conn:
+        if not conn.execute('SELECT 1 FROM businesses WHERE id=?', (business_id,)).fetchone():
+            raise HTTPException(404, 'Компания не найдена')
+        conn.execute("""INSERT INTO business_onboarding VALUES (?,?,?,?)
+            ON CONFLICT(business_id) DO UPDATE SET source_ids=excluded.source_ids,
+                updated_at=excluded.updated_at""", (business_id, json.dumps(sources), now, now))
+        return onboarding_state(conn, business_id)
 
 
 @router.get('/business-groups/{group_id}')

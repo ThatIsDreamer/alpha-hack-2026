@@ -97,3 +97,50 @@ def test_failed_reimport_keeps_previous_database(dataset):
     with businesses.connection() as conn:
         assert conn.execute('SELECT count(*) FROM businesses').fetchone()[0] == 3
     assert not Path(str(businesses.db_path()) + '.importing').exists()
+
+
+def test_onboarding_saved_per_company_and_survives_restart_and_reseed(dataset):
+    seed, original = dataset
+    with TestClient(api.app) as client:
+        state = client.get('/api/businesses/U_26030/onboarding').json()
+        assert state['completed'] is False and state['source_ids'] == []
+        assert state['completed_at'] is None
+        source_ids = [s['id'] for s in state['sources'] if s['enabled']][:2]
+        saved = client.post('/api/businesses/U_26030/onboarding', json={'source_ids': [*source_ids, source_ids[0]]}).json()
+        assert saved['completed'] is True and saved['source_ids'] == sorted(source_ids)
+        assert saved['completed_at'] and saved['updated_at']
+        assert client.get('/api/businesses/U_2/onboarding').json()['completed'] is False
+        assert client.get('/api/businesses/U_26030').json()['onboarding']['completed'] is True
+        changed = client.post('/api/businesses/U_26030/onboarding', json={'source_ids': source_ids[:1]}).json()
+        assert changed['completed_at'] == saved['completed_at']
+        assert changed['source_ids'] == source_ids[:1]
+    with TestClient(api.app) as client:
+        assert client.get('/api/businesses/U_26030/onboarding').json()['source_ids'] == source_ids[:1]
+    # Change the seed fingerprint to exercise a real atomic dataset replacement.
+    with gzip.open(seed / businesses.FILES[2], 'at', encoding='utf-8') as file:
+        file.write('F2;U_2;Москва;МОСКОВСКИЙ\n')
+    original(businesses.db_path(), seed)
+    with TestClient(api.app) as client:
+        state = client.get('/api/businesses/U_26030/onboarding').json()
+        assert state['source_ids'] == source_ids[:1] and state['completed_at'] == saved['completed_at']
+
+
+def test_onboarding_validation_does_not_complete_or_overwrite(dataset):
+    with TestClient(api.app) as client:
+        url = '/api/businesses/U_26030/onboarding'
+        for payload in ({'source_ids': []}, {'source_ids': ['not-a-source']}, {'source_ids': [1]}, {}, {'source_ids': ['lenta'] * 101}):
+            assert client.post(url, json=payload).status_code == 422
+            assert client.get(url).json()['completed'] is False
+        assert client.get('/api/businesses/missing/onboarding').status_code == 404
+        assert client.post('/api/businesses/missing/onboarding', json={'source_ids': ['lenta']}).status_code == 404
+        assert client.post(url, json={'source_ids': ['lenta']}).status_code == 200
+        assert client.post(url, json={'source_ids': ['bad']}).status_code == 422
+        assert client.get(url).json()['source_ids'] == ['lenta']
+
+
+def test_existing_database_gets_onboarding_table_without_reimport(dataset):
+    businesses.import_dataset(businesses.db_path())
+    with sqlite3.connect(businesses.db_path()) as conn:
+        conn.execute('DROP TABLE business_onboarding')
+    businesses.import_dataset(businesses.db_path())
+    assert businesses.get_onboarding('U_26030')['completed'] is False

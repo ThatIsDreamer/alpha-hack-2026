@@ -45,3 +45,25 @@ sends `X-Business-ID`. Attach `Depends(recommendation_business)` to those future
 FastAPI handlers to validate the ID and load its profile/group context. CORS
 allows this header. No recommendation endpoint or ranking behavior is implemented.
 This context is a demo preference, not an authentication or authorization mechanism.
+
+## Company onboarding
+
+- `GET /api/businesses/{id}/onboarding` returns `completed`, `source_ids`,
+  `completed_at`, `updated_at` and the configured source catalog.
+- `POST /api/businesses/{id}/onboarding` with `{"source_ids":["lenta","kommersant"]}`
+  validates and deduplicates IDs, saves the preference and completes onboarding
+  atomically. At least one known source is required. Later submissions edit the
+  preference while retaining the original completion timestamp.
+- Profile detail also includes `onboarding`. Companies without a persisted row
+  have `completed: false`. Settings belong to the company, not the browser.
+- `business_onboarding` lives in the same persistent business DB. Startup creates
+  the table for existing databases without rebuilding the dataset; seed updates
+  copy these mutable settings before the atomic file replacement.
+- Preferences are stored only. Ingestion, news listing and recommendations do not
+  use them yet. Disabled sources are labelled in the UI and can be stored as future
+  preferences; this does not enable collection from them.
+
+The selected company remains local. For an incomplete company, the frontend
+replaces the main workspace with source onboarding until a successful save;
+the Alfa header/sidebar remain available. Completed companies can edit sources
+from the company selector, using the same inline workspace.
