@@ -29,3 +29,8 @@ The Alfa logo in `src/assets/alfa-logo.png` was supplied by the user. Banking co
 open demo notices; “Все сервисы” links to the live news inbox. No banking operations are implemented.
 
 News, article details, and run history share the Alfa shell. `Newsroom.css` styles live content; banking actions and skeletons are limited to `/`.
+
+The company selector uses `/api/businesses` (20 results per page, debounced search)
+and saves only the selected ID locally. Future recommendation callers must use
+`recommendationRequest` from `src/lib/api.ts`; ordinary news requests remain unfiltered.
+The dropdown uses Motion for React with opacity-only reduced motion.

@@ -6,14 +6,11 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowUpRight01Icon, ArrowLeft01Icon, ArrowRight01Icon, PlayIcon, TelegramIcon, RssIcon, Globe02Icon, News01Icon, Clock01Icon } from '@hugeicons/core-free-icons'
 import { Button } from './components/ui/button'
 import './Newsroom.css'
+import { apiRequest } from './lib/api'
 
 const labels: Record<string,string> = { politics: 'Политика', economy: 'Экономика', business: 'Бизнес', law: 'Право', society: 'Общество', technology: 'Технологии', science: 'Наука', health: 'Здоровье', environment: 'Экология', culture: 'Культура', sports: 'Спорт', other: 'Другое', none: 'Нет', low: 'Низкий', moderate: 'Умеренный', high: 'Высокий', unclear: 'Неясно' }
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
-async function request<T>(path: string, method = 'GET'): Promise<T> {
-  const response = await fetch(`${API}${path}`, { method })
-  const data = await response.json()
-  if (!response.ok) throw new Error(data.detail || 'API недоступен. Попробуйте ещё раз.')
-  return data
+function request<T>(path: string, method = 'GET'): Promise<T> {
+  return apiRequest<T>(path, { method })
 }
 function useData<T>(path: string, refresh = 0) {
   const [state, setState] = useState<{ path: string; data: T | null; error: string }>({ path: '', data: null, error: '' })

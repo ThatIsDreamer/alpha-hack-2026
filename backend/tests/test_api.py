@@ -1,6 +1,13 @@
+import pytest
 from fastapi.testclient import TestClient
 from backend import api
 from backend.collectors.base import Item
+
+
+@pytest.fixture(autouse=True)
+def skip_business_seed(monkeypatch):
+    # These tests exercise news only; business import/API has separate fixtures.
+    monkeypatch.setattr(api.businesses, 'import_dataset', lambda path: None)
 
 
 def test_api_reads_persistence_and_bounds_demo(tmp_path, monkeypatch):

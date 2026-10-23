@@ -12,6 +12,7 @@ import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from .db import Database
+from . import businesses
 from .main import ROOT, run
 from .classifier import create_classifier, TOPICS, SEVERITIES
 
@@ -98,6 +99,9 @@ async def lifespan(app):
         path = Path(os.getenv('NEWS_DB', '/data/news.sqlite3')).resolve()
         if not mount or not path.is_relative_to(Path(mount).resolve()) or not Path(mount).is_dir():
             raise RuntimeError('Persistent database volume is required')
+        if not businesses.db_path().resolve().is_relative_to(Path(mount).resolve()):
+            raise RuntimeError('Business database must use the persistent volume')
+    businesses.import_dataset(businesses.db_path())
     initialize()
     task = asyncio.create_task(scheduler()) if os.getenv('ENABLE_SCHEDULER', 'true') == 'true' else None
     yield
@@ -109,8 +113,9 @@ async def lifespan(app):
 
 app = FastAPI(title='Newsroom API', lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ORIGINS', 'http://localhost:5173').split(','),
-                   allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
+                   allow_methods=['GET', 'POST'], allow_headers=['Content-Type', 'X-Business-ID'])
 
+app.include_router(businesses.router)
 
 @app.get('/health')
 def health():

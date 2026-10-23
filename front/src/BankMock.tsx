@@ -7,6 +7,7 @@ import { Skeleton } from './components/ui/skeleton'
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from './components/ui/dialog'
 import './BankMock.css'
 import alfaLogo from './assets/alfa-logo.png'
+import BusinessSelector from './BusinessSelector'
 
 const navigation = [
   { text: 'Заявки', icon: Task01Icon },
@@ -58,7 +59,7 @@ export default function BankMock({ children }: { children?: ReactNode }) {
         <Button variant="ghost" size="icon" className="bank-icon-button" aria-label="Сообщения" onClick={() => show('Сообщения')}><Icon icon={Mail01Icon} /></Button>
         <Button variant="ghost" size="icon" className="bank-icon-button" aria-label="Уведомления" onClick={() => show('Уведомления')}><Icon icon={Notification03Icon} /></Button>
         <span className="bank-header-divider" />
-        <Button variant="ghost" className="bank-companies" onClick={() => show('Мои компании')}><span className="bank-company-marks" aria-hidden="true"><i>А</i><i>Б</i><i>М</i><i /></span><span><strong>Мои компании</strong><small>Набоков И.Д.</small></span></Button>
+        <BusinessSelector />
         <Button className="bank-boss" onClick={() => show('Альфа Босс')}><span className="bank-avatar"><Icon icon={Contact01Icon} size={18} /></span>Альфа Босс</Button>
         <span className="bank-header-divider" />
         <Button variant="ghost" size="icon" className="bank-icon-button bank-logout" aria-label="Выход" onClick={() => show('Выход')}><Icon icon={Logout03Icon} /></Button>

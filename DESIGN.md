@@ -160,3 +160,17 @@ Preserve filtering, pagination, article links, collection, token costs and run p
 - Do preserve news and run-history functionality inside the shared design.
 - Don't turn static placeholders into simulated live banking content.
 - Don't treat static-mock review approval as approval for real banking operations.
+
+### Business selector
+
+The header company control opens an anchored Radix popover on desktop and a
+viewport-constrained popover on mobile. Use Hugeicons and the shared neutral
+palette, 16px panel radius, 410px maximum width and a soft downward shadow.
+Search is debounced by 250ms, results are server-paged at 20 companies, and only
+the selected ID is saved locally. Synthetic IDs identify companies without
+invented names. Show city, industry and revenue to help distinguish profiles.
+
+Motion for React animates the panel as one unit: 160ms ease-out, opacity plus
+5px vertical travel and scale from .985. Reduced motion uses 100ms opacity only.
+Escape/outside interaction closes it; focus starts in search and returns to the
+trigger on dismissal. Keep loading, empty, retry, clear-selection and pagination states.
