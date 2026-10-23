@@ -46,3 +46,12 @@
 .recommendation-heading>div{max-width:100%}
 
 .recommendation-news-strip::-webkit-scrollbar{display:none}
+
+.recommendation-guide{display:flex;align-items:center;gap:24px;max-width:760px;margin:30px 0 24px}
+.recommendation-shake{flex:0 0 104px;cursor:grab;user-select:none}
+.recommendation-shake:active{cursor:grabbing}
+.recommendation-guide-message{font-size:18px;line-height:1.5;margin:0;color:#252629}
+.recommendation-shake-hint{font-size:12px;line-height:1.6;max-width:400px;margin:8px 0 0;color:#62666c}
+.recommendation-list{padding-left:128px;max-width:888px}
+.recommendation-message{border-radius:4px 16px 16px 16px}
+@media(max-width:760px){.recommendation-guide{gap:18px;margin-top:24px}.recommendation-guide-message{font-size:16px}.recommendation-shake-hint{font-size:11px}.recommendation-list{padding-left:20px}.recommendation-message{border-radius:4px 14px 14px 14px}}

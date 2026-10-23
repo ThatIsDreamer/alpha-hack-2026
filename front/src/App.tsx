@@ -3,6 +3,7 @@ import { BrowserRouter, Link, Route, Routes, useParams, useSearchParams, useNavi
 import './App.css'
 import BankMock from './BankMock'
 import Recommendations from './Recommendations'
+import MascotDemo from './MascotDemo'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowUpRight01Icon, ArrowLeft01Icon, ArrowRight01Icon, PlayIcon } from '@hugeicons/core-free-icons'
 import { Button } from './components/ui/button'
@@ -113,7 +114,7 @@ function RouteFocus() {
   const { pathname } = useLocation()
   const previous = useRef(pathname)
   useEffect(() => {
-    document.title = pathname === '/' ? 'Альфа-Бизнес · Демо' : 'Ньюсрум · Альфа-Бизнес'
+    document.title = pathname === '/demo/mascot' ? 'Маскот · Демо' : pathname === '/' ? 'Альфа-Бизнес · Демо' : 'Ньюсрум · Альфа-Бизнес'
     if (previous.current === pathname) return
     previous.current = pathname
     window.scrollTo(0, 0)
@@ -123,5 +124,5 @@ function RouteFocus() {
   return null
 }
 function NewsLayout() { return <BankMock><div className="newsroom"><Routes><Route path="/news" element={<Recommendations />} /><Route path="/debug/news" element={<Inbox />} /><Route path="/news/:id" element={<Article />} /><Route path="/runs" element={<Runs />} /><Route path="/debug/runs" element={<Runs />} /><Route path="*" element={<><h1>Страница не найдена</h1><Link to="/news">Вернуться в Ньюсрум</Link></>} /></Routes></div></BankMock> }
-function App() { return <BrowserRouter><RouteFocus /><Routes><Route path="/" element={<BankMock />} /><Route path="*" element={<NewsLayout />} /></Routes></BrowserRouter> }
+function App() { return <BrowserRouter><RouteFocus /><Routes><Route path="/demo/mascot" element={<MascotDemo />} /><Route path="/" element={<BankMock />} /><Route path="*" element={<NewsLayout />} /></Routes></BrowserRouter> }
 export default App
