@@ -29,16 +29,18 @@ context is shared per company; there is no user authentication or access control
 ## UI
 
 The welcome mascot introduces the newsroom, with an option to go straight to
-company setup. The next step opens a managed interview with the mascot, or a manual
-form when preferred or when the model is unavailable. Users can confirm known
+company setup. The next step opens a chat with the mascot: assistant/user message bubbles,
+a scrollable transcript, optimistic user messages, a thinking state, and a compact
+composer (Enter sends, Shift+Enter adds a newline). Users can confirm known
 facts with all answer fields empty. The final step retains the existing source
 picker with the mascot. The sequence is welcome → context → sources.
 Once context is confirmed, reloading an unfinished setup resumes at sources.
 Companies with saved sources but no confirmed context see
 the new context step once; source preferences remain intact. «Контекст компании»
 in the newsroom opens the inline editor, with save/cancel and failure states.
-Switching companies unmounts forms and cancels old reads. Nothing is persisted
-until an explicit save; context and source preferences are saved separately.
+Switching companies unmounts the chat and cancels old reads. Conversation drafts
+persist automatically; only explicit confirmation updates company context.
+Context and source preferences are saved separately.
 
 ## Recommendations
 
@@ -77,24 +79,30 @@ credits or change the production databases. Deploying or pushing is a separate s
   user must still review the proposed wording before confirmation.
 - `context_dialogues` stores history, extracted draft, evidence and revision.
   Successful turns persist atomically. Provider failures leave the prior
-  transcript/draft intact; the UI keeps the unsent answer for retry/manual entry.
+  transcript/draft intact; the chat keeps the unsent answer in its composer for retry.
   Sessions survive restarts and seed replacements. Company switches unmount the
   conversation and abort client requests. Stale turns/context revisions return
   409. An in-process lock and two-second per-session attempt cooldown bound spend;
   failed provider attempts also count toward the cooldown. No automatic retries.
-- Completing the interview does not update the confirmed profile. The review
-  form displays extracted values and source quotes. Confirmation uses the usual
+- Completing the interview does not update the confirmed profile. A final mascot
+  message displays the proposed context and expandable source quotes. Confirmation uses the usual
   context POST with `dialogue_id`; unfinished, foreign-company and stale sessions
   cannot be confirmed. Matching extracted values receive `user_confirmed_ai`
-  provenance with evidence; values edited in review receive `user` provenance.
+  provenance with evidence. Direct API edits retain `user` provenance.
   Until confirmation, recommendations continue using the old context.
-- The form fallback preserves successfully extracted values and the current
-  typed answer. Overlong fallback fields require shortening rather than silent
-  truncation. A manual save retains the ordinary user provenance.
+- The UI has no multi-field form or form fallback. «Уточнить» under a summary
+  block calls POST `.../dialogue/revise` with `dialogue_id`, `revision`, `field`.
+  The server reopens that block as a new chat question, preserving history. Up to
+  four user-initiated correction rounds are allowed per session, in addition to
+  the initial interview. Latest corrections supersede earlier wording and carry
+  new validated evidence. Revision/company/confirmed-state guards also apply.
+  Confirmation remains inside the chat.
 - AI config reuses `AI_API_KEY`/`OPENAI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`.
   API startup reads the local `.env` without overriding existing environment
   variables. No key is embedded in the frontend. Without a key the UI explicitly
-  disables model answers and offers the form; no synthetic AI conversation is
-  presented. Provider usage is recorded as purpose `company_context`, included
+  disables model answers and offers skipping or returning later; no synthetic AI
+  conversation is presented. Provider usage is recorded as purpose `company_context`, included
   in the service-wide usage totals. Timeout is 45 seconds, max retries 0, output
   cap 900 tokens, and DeepSeek thinking is disabled as in existing integrations.
+
+For isolated tests, use `LOAD_ENV_FILE=false AI_API_KEY= OPENAI_API_KEY= .venv/bin/python -m pytest backend/tests -q` so local provider credentials are never loaded.

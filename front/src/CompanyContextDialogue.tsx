@@ -1,17 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
-import CompanyContextForm, { type CompanyContext } from './CompanyContextForm'
+import { type CompanyContext } from './CompanyContextForm'
 import { Mascot } from './components/Mascot'
 import { Button } from './components/ui/button'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { ArrowUpRight01Icon } from '@hugeicons/core-free-icons'
 import { apiRequest } from './lib/api'
 import './CompanyContextDialogue.css'
 
-type Message = { id: number; role: 'assistant' | 'user'; field: keyof CompanyContext['answers']; text: string; skipped?: boolean }
+type Field = keyof CompanyContext['answers']
+type Message = { id: number; role: 'assistant' | 'user'; field: Field; text: string; skipped?: boolean }
 type Session = {
   id: string; revision: number; base_version: number; ai_available: boolean
   draft: CompanyContext['answers']; evidence: Record<string, { message_id: number; quote: string }[]>
-  messages: Message[]; pending: (keyof CompanyContext['answers'])[]; ready: boolean; turns: number
+  messages: Message[]; pending: Field[]; ready: boolean; turns: number; corrections?: number
 }
-const labels = { description: 'Деятельность', counterparties: 'Покупатели и поставщики', geography: 'География', priorities: 'Текущие задачи' }
+const labels: Record<Field, string> = { description: 'Чем занимается компания', counterparties: 'Покупатели и поставщики', geography: 'Где работает бизнес', priorities: 'Текущие задачи' }
 
 export default function CompanyContextDialogue({ context, busy, onSave, onCancel }: {
   context: CompanyContext; busy: boolean
@@ -23,67 +26,87 @@ export default function CompanyContextDialogue({ context, busy, onSave, onCancel
   const [processing, setProcessing] = useState(false)
   const [aiAvailable, setAiAvailable] = useState(false)
   const [answer, setAnswer] = useState('')
+  const [pendingText, setPendingText] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const [manual, setManual] = useState(false)
   const [retry, setRetry] = useState(0)
   const mounted = useRef(true)
+  const inFlight = useRef(false)
   const request = useRef<AbortController | null>(null)
-  const questionHeading = useRef<HTMLHeadingElement>(null)
+  const transcript = useRef<HTMLDivElement>(null)
+  const summary = useRef<HTMLDivElement>(null)
+  const input = useRef<HTMLTextAreaElement>(null)
   const base = `/api/businesses/${encodeURIComponent(context.business_id)}/context/dialogue`
   useEffect(() => {
     mounted.current = true
     const abort = new AbortController()
-    apiRequest<{ session: Session | null; ai_available: boolean }>(base, { signal: abort.signal })
-      .then(data => { if (!abort.signal.aborted) { setSession(data.session); setAiAvailable(data.ai_available); setLoading(false); setError('') } })
+    apiRequest<{ session: Session | null }>(base, { signal: abort.signal })
+      .then(async data => data.session || apiRequest<Session>(`${base}/start`, { method: 'POST', signal: abort.signal }))
+      .then(data => { if (!abort.signal.aborted) { setSession(data); setAiAvailable(data.ai_available); setLoading(false); setError('') } })
       .catch(e => { if (!abort.signal.aborted) { setLoading(false); setError(e.message) } })
     return () => { mounted.current = false; abort.abort(); request.current?.abort() }
   }, [base, retry])
-  useEffect(() => { questionHeading.current?.focus({ preventScroll: true }) }, [session?.revision, session?.id])
-  async function advance(skip = false) {
-    if (processing || busy) return
-    setProcessing(true); setError('')
+  useEffect(() => {
+    const element = transcript.current
+    if (element) {
+      if (session?.ready && summary.current && !processing) {
+        element.scrollTop += summary.current.getBoundingClientRect().top - element.getBoundingClientRect().top - 20
+      } else element.scrollTop = element.scrollHeight
+    }
+  }, [session?.revision, session?.id, session?.ready, processing, busy, loading, error])
+  useEffect(() => {
+    const element = input.current
+    if (element) { element.style.height = 'auto'; element.style.height = `${Math.min(element.scrollHeight, 120)}px` }
+  }, [answer])
+  async function send(skip = false, revise?: Field) {
+    if (inFlight.current || busy || !session || (!skip && !revise && !answer.trim())) return
+    inFlight.current = true
+    setProcessing(true); setError(''); setPendingText(revise ? null : skip ? 'Пока пропустим этот вопрос.' : answer.trim())
     const abort = new AbortController()
     request.current = abort
     try {
-      const next = await apiRequest<Session>(session ? `${base}/answer` : `${base}/start`, {
+      const next = await apiRequest<Session>(`${base}/${revise ? 'revise' : 'answer'}`, {
         method: 'POST', signal: abort.signal, headers: { 'Content-Type': 'application/json' },
-        ...(session ? { body: JSON.stringify({ dialogue_id: session.id, revision: session.revision, answer, skip }) } : {}),
+        body: JSON.stringify({ dialogue_id: session.id, revision: session.revision,
+          ...(revise ? { field: revise } : { answer, skip }) }),
       })
-      if (mounted.current) { setSession(next); setAnswer(''); setAiAvailable(next.ai_available) }
+      if (mounted.current) {
+        setSession(next); setAnswer(''); setAiAvailable(next.ai_available)
+        requestAnimationFrame(() => input.current?.focus({ preventScroll: true }))
+      }
     } catch (e) { if (mounted.current && !abort.signal.aborted) setError((e as Error).message) }
-    finally { if (mounted.current) setProcessing(false) }
+    finally { inFlight.current = false; if (mounted.current) { setProcessing(false); setPendingText(null) } }
   }
-  const draft = { ...(session?.draft || context.answers) }
-  // Keep an unsent answer when switching to the fallback form.
-  if (manual && session && !session.ready && answer.trim()) {
-    const key = session.pending[0]
-    draft[key] = [draft[key], answer.trim()].filter(Boolean).join('\n')
-  }
-  if (manual || session?.ready) return <div className="context-dialogue-review">
-    <div className="context-dialogue-guide"><Mascot size={72} expression="happy" /><p>{manual ? 'Можно уточнить контекст в форме. Ответы из диалога уже перенесены.' : 'Вот как я понял ваш бизнес. Проверьте формулировки и исправьте неточности. Пока вы не подтвердите профиль, рекомендации используют прежний контекст.'}</p></div>
-    <CompanyContextForm context={{ ...context, answers: draft }} busy={busy}
-      evidence={manual ? undefined : session?.evidence}
-      onSave={value => onSave(value, manual ? undefined : session?.id)} onCancel={onCancel} />
-  </div>
-  const current = session?.messages[session.messages.length - 1]
-  return <section className="context-dialogue" aria-label="Диалог о компании" aria-busy={loading || processing}>
-    <div className="context-dialogue-guide"><Mascot size={104} expression={processing ? 'attentive' : 'curious-right'} /><div>
-      <h2 ref={questionHeading} tabIndex={-1}>{current?.text || 'Давайте познакомимся с вашим бизнесом'}</h2>
-      <p>{session ? `${labels[session.pending[0]]} · ответов ${session.turns} из максимум 6` : 'Обсудим деятельность, партнёров, географию и задачи. До четырёх основных вопросов и двух уточнений.'}</p>
-    </div></div>
-    {loading && <p role="status">Загружаем сохранённый диалог…</p>}
-    {!loading && !aiAvailable && <p className="context-dialogue-notice" role="status">Модель пока не подключена. Можно заполнить профиль через форму — все возможности сохранения доступны.</p>}
-    {error && <div className="onboarding-error" role="alert"><p>{error}</p><Button type="button" disabled={processing} variant="secondary" onClick={() => { setLoading(true); setRetry(value => value + 1) }}>Загрузить сохранённый диалог</Button></div>}
-    {session && session.messages.length > 1 && <details className="context-dialogue-history"><summary>История разговора · {session.turns} ответов</summary><ol>{session.messages.slice(0, -1).map(message => <li key={message.id} className={`context-message-${message.role}`}><strong>{message.role === 'user' ? 'Вы' : 'Маскот'}</strong><p>{message.text}</p></li>)}</ol></details>}
-    {!loading && <form onSubmit={event => { event.preventDefault(); void advance() }}>
-      {session && <label className="context-dialogue-answer"><span>Ваш ответ</span><textarea value={answer} onChange={event => setAnswer(event.target.value)} rows={4} maxLength={1500} disabled={processing || busy} aria-describedby="context-dialogue-help" /></label>}
-      <p id="context-dialogue-help" className="context-dialogue-help">{processing ? 'Разбираю ответ…' : 'Ответ будет обработан подключённой моделью. Не указывайте персональные данные и секреты. Профиль сохранится после вашего подтверждения.'}</p>
-      <div className="context-dialogue-actions">
-        <Button type="button" variant="secondary" disabled={processing || busy} onClick={() => setManual(true)}>Заполнить форму</Button>
-        {onCancel && <Button type="button" variant="secondary" disabled={processing || busy} onClick={onCancel}>Отмена</Button>}
-        {session && <Button type="button" variant="secondary" disabled={processing || busy} onClick={() => void advance(true)}>Пропустить вопрос</Button>}
-        <Button type="submit" disabled={processing || busy || (!!session && (!answer.trim() || !aiAvailable))}>{processing ? 'Обрабатываем…' : session ? 'Ответить' : 'Начать диалог'}</Button>
-      </div>
-    </form>}
+  const blocked = loading || processing || busy
+  return <section className={`context-chat${session?.ready ? ' context-chat-ready' : ''}`} aria-label="Чат с маскотом">
+    <div className="context-chat-top"><Mascot size={42} expression={processing ? 'attentive' : 'happy'} /><div><strong>Маскот Ньюсрума</strong><span>{processing ? 'Думаю над вашим ответом…' : busy ? 'Сохраняю контекст…' : 'Разберёмся в вашем бизнесе вместе'}</span></div>{onCancel && <button type="button" className="context-chat-close" disabled={blocked} onClick={onCancel}>Закрыть</button>}</div>
+    <div ref={transcript} className="context-chat-transcript" role="log" aria-live="polite" aria-relevant="additions" aria-label="Сообщения" tabIndex={0}>
+      <div className="context-chat-row context-chat-assistant"><Mascot size={32} expression="happy" /><div className="context-chat-bubble"><p>Расскажите немного о компании. Я буду задавать вопросы по одному, а в конце покажу, какой контекст получился. Вы сможете всё уточнить перед сохранением.</p></div></div>
+      {loading && <div className="context-chat-row context-chat-assistant"><div className="context-chat-bubble" role="status"><p>Секунду, открываю наш разговор…</p></div></div>}
+      {session?.messages.map(message => <div key={message.id} className={`context-chat-row context-chat-${message.role === 'assistant' ? 'assistant' : 'user'}`}>
+        {message.role === 'assistant' && <Mascot size={32} expression={message.id === session.messages[session.messages.length - 1].id ? 'curious-right' : 'happy'} />}
+        <div className="context-chat-bubble"><span className="bank-sr-only">{message.role === 'user' ? 'Вы: ' : 'Маскот: '}</span><p>{message.skipped ? 'Пока пропустим этот вопрос.' : message.text}</p></div>
+      </div>)}
+      {pendingText && <div className="context-chat-row context-chat-user"><div className="context-chat-bubble"><p>{pendingText}</p></div></div>}
+      {processing && <div className="context-chat-row context-chat-assistant"><Mascot size={32} expression="attentive" /><div className="context-chat-bubble context-chat-thinking" role="status">Думаю…</div></div>}
+      {!loading && !aiAvailable && <div className="context-chat-row context-chat-assistant"><Mascot size={32} expression="attentive" /><div className="context-chat-bubble"><p>Сейчас модель недоступна. Можно вернуться к разговору позже или пропустить вопросы, на которые пока нет ответа.</p></div></div>}
+      {error && <div className="context-chat-row context-chat-assistant"><Mascot size={32} expression="attentive" /><div className="context-chat-bubble context-chat-error" role="alert"><p>{error}</p><button type="button" disabled={blocked} onClick={() => { setLoading(true); setRetry(value => value + 1) }}>Восстановить разговор</button></div></div>}
+      {session?.ready && !processing && <div ref={summary} className="context-chat-row context-chat-assistant"><Mascot size={32} expression="happy" /><div className="context-chat-bubble context-chat-summary">
+        <p>Вот как я понял ваш бизнес. Всё верно? Если что-то нужно изменить, выберите «Уточнить» — продолжим разговор.</p>
+        <dl>{(Object.keys(labels) as Field[]).map(field => <div key={field}><dt>{labels[field]}</dt><dd>{session.draft[field] || 'Пока неизвестно'}</dd><button type="button" disabled={blocked || (session.corrections || 0) >= 4} onClick={() => void send(false, field)} aria-label={`Уточнить: ${labels[field]}`}>Уточнить</button></div>)}</dl>
+        {!!Object.values(session.evidence).flat().length && <details><summary>На основе ваших ответов</summary>{Object.entries(session.evidence).map(([field, items]) => <p key={field}>{items.map(item => `«${item.quote}»`).join('; ')}</p>)}</details>}
+        <Button className="context-chat-confirm" type="button" disabled={blocked} onClick={() => onSave(session.draft, session.id)}>{busy ? 'Сохраняю…' : 'Всё верно, сохранить'}</Button>
+        <small>До подтверждения рекомендации используют прежний контекст компании.</small>
+      </div></div>}
+    </div>
+    {session && !session.ready && <div className="context-chat-bottom">
+      <form className="context-chat-composer" onSubmit={event => { event.preventDefault(); void send() }}>
+        <textarea ref={input} value={answer} onChange={event => setAnswer(event.target.value)} rows={1} maxLength={1500} disabled={blocked} aria-label="Сообщение маскоту" placeholder="Напишите маскоту…" onKeyDown={event => {
+          if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (aiAvailable) void send() }
+        }} />
+        <button type="submit" className="context-chat-send" disabled={blocked || !answer.trim() || !aiAvailable} aria-label="Отправить сообщение"><HugeiconsIcon icon={ArrowUpRight01Icon} size={21} aria-hidden="true" /></button>
+      </form>
+      <div className="context-chat-foot"><span>Enter — отправить · Shift + Enter — новая строка</span><button type="button" disabled={blocked} onClick={() => void send(true)}>Пропустить вопрос</button></div>
+      <p className="context-chat-privacy">Ответы обрабатывает подключённая модель. Не отправляйте персональные данные и секреты.</p>
+    </div>}
   </section>
 }

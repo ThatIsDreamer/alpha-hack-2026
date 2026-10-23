@@ -95,7 +95,8 @@ async def scheduler():
 
 @asynccontextmanager
 async def lifespan(app):
-    load_dotenv(ROOT.parent / '.env')
+    if os.getenv('LOAD_ENV_FILE', 'true') == 'true':
+        load_dotenv(ROOT.parent / '.env')
     if os.getenv('RAILWAY_ENVIRONMENT_ID'):
         mount = os.getenv('RAILWAY_VOLUME_MOUNT_PATH')
         path = Path(os.getenv('NEWS_DB', '/data/news.sqlite3')).resolve()

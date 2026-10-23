@@ -1,29 +1,49 @@
-.context-dialogue, .context-dialogue-review { max-width: 760px; margin-top: 28px; }
-.context-dialogue-guide { display: flex; align-items: flex-start; gap: 24px; margin-bottom: 24px; }
-.context-dialogue-guide > div { min-width: 0; }
-.context-dialogue-guide h2 { font-size: 21px; line-height: 1.5; letter-spacing: -.02em; margin: 0 0 12px; overflow-wrap: anywhere; }
-.context-dialogue-guide p { font-size: 13px; line-height: 1.6; color: #52555b; margin: 0; }
-.context-dialogue-review .context-dialogue-guide p { font-size: 14px; }
-.context-dialogue-answer { display: grid; gap: 10px; font-size: 14px; font-weight: 600; }
-.context-dialogue-answer textarea { box-sizing: border-box; width: 100%; min-height: 120px; resize: vertical; background: #fff; color: #252629; border: 1px solid #c4c6cb; border-radius: 12px; padding: 14px; font: inherit; font-weight: 400; line-height: 1.6; caret-color: #ef3124; }
-.context-dialogue-answer textarea:hover { border-color: #73767b; }
-.context-dialogue-answer textarea:focus-visible, .context-dialogue-history summary:focus-visible { outline: 2px solid #ef3124; outline-offset: 3px; }
-.context-dialogue-help, .context-dialogue-notice { font-size: 12px; line-height: 1.6; color: #52555b; margin: 16px 0 24px; }
-.context-dialogue-actions { display: flex; gap: 12px; flex-wrap: wrap; }
-.bank-shell .context-dialogue-actions button { min-height: 42px; white-space: normal; font-size: 13px; border-radius: 10px; padding: 10px 16px; }
-.bank-shell .context-dialogue-actions button:last-child { background: #ef3124; color: #fff; margin-left: auto; }
-.bank-shell .context-dialogue-actions button:last-child:hover:enabled { background: #d92c20; }
-.context-dialogue-history { margin: 20px 0 24px; font-size: 13px; }
-.context-dialogue-history summary { cursor: pointer; color: #52555b; }
-.context-dialogue-history ol { list-style: none; padding: 0; max-height: 320px; overflow-y: auto; scrollbar-color: #c4c6cb transparent; }
-.context-dialogue-history li { padding: 16px 0; border-bottom: 1px solid #e1e2e5; }
-.context-dialogue-history strong { font-size: 12px; }
-.context-dialogue-history p { line-height: 1.6; margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
-.context-dialogue ::selection { background: #ffe1dd; color: #252629; }
+.context-chat { max-width: 820px; margin-top: 24px; background: #fff; border-radius: 16px; overflow: hidden; }
+.context-chat-top { display: flex; align-items: center; gap: 12px; padding: 18px 22px; border-bottom: 1px solid #e8e9ec; }
+.context-chat-top > div { display: grid; gap: 4px; min-width: 0; }
+.context-chat-top strong { font-size: 14px; font-weight: 600; }
+.context-chat-top span:not(.mascot):not(.mascot-front-frame) { font-size: 12px; color: #52555b; }
+.bank-shell .context-chat-close { margin-left: auto; border: 0; padding: 8px; background: transparent; font-size: 12px; color: #52555b; }
+.context-chat-transcript { height: clamp(300px, calc(100dvh - 390px), 560px); overflow-y: auto; overscroll-behavior: contain; padding: 24px 22px; scrollbar-width: thin; scrollbar-color: #c4c6cb transparent; }
+.context-chat-ready .context-chat-transcript { height: clamp(360px, calc(100dvh - 300px), 640px); }
+.context-chat-row { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 16px; }
+.context-chat-row:last-child { margin-bottom: 0; }
+.context-chat-bubble { max-width: min(620px, 88%); min-width: 0; background: #f1f2f4; padding: 14px 17px; border-radius: 16px 16px 16px 4px; font-size: 14px; line-height: 1.6; color: #252629; overflow-wrap: anywhere; }
+.context-chat-bubble p { margin: 0; white-space: pre-wrap; }
+.context-chat-user { justify-content: flex-end; padding-left: 42px; }
+.context-chat-user .context-chat-bubble { background: #252629; color: #fff; border-radius: 16px 16px 4px 16px; }
+.context-chat-thinking { color: #52555b; }
+.context-chat-bottom { border-top: 1px solid #e8e9ec; padding: 16px 22px 12px; }
+.context-chat-composer { display: flex; align-items: flex-end; gap: 12px; background: #f3f4f5; border-radius: 14px; padding: 8px; }
+.context-chat-composer:focus-within { outline: 2px solid #ef3124; outline-offset: 2px; }
+.context-chat-composer textarea { flex: 1; min-width: 0; box-sizing: border-box; min-height: 40px; max-height: 120px; resize: none; padding: 9px 8px; font: inherit; font-size: 14px; line-height: 1.6; border: 0; background: transparent; color: #252629; caret-color: #ef3124; outline: none; }
+.context-chat-composer textarea::placeholder { color: #62666c; }
+.bank-shell .context-chat-send { flex: 0 0 40px; width: 40px; height: 40px; padding: 0; border: 0; border-radius: 10px; color: #fff; background: #ef3124; }
+.bank-shell .context-chat-send:hover:enabled, .bank-shell .context-chat-confirm:hover:enabled { background: #d92c20; }
+.context-chat-send:disabled { opacity: .45; }
+.context-chat-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 12px; font-size: 11px; color: #62666c; }
+.bank-shell .context-chat-foot button { border: 0; padding: 6px 0; background: transparent; color: #52555b; font-size: 12px; }
+.context-chat-privacy { margin: 10px 0 0; font-size: 11px; line-height: 1.6; color: #62666c; }
+.context-chat-summary dl { display: block; margin: 18px 0; }
+.context-chat-summary dl > div { border-top: 1px solid #d9dce1; padding: 12px 0; }
+.context-chat-summary dt { text-transform: none; font-size: 12px; font-weight: 600; color: #52555b; }
+.context-chat-summary dd { font-size: 14px; line-height: 1.6; margin: 5px 0; white-space: pre-wrap; }
+.bank-shell .context-chat-summary dl button, .bank-shell .context-chat-error button { background: transparent; border: 0; font-size: 12px; padding: 4px 0; text-decoration: underline; text-underline-offset: 3px; color: #52555b; }
+.context-chat-summary details { font-size: 12px; margin-bottom: 18px; }
+.context-chat-summary details p { margin-top: 10px; }
+.context-chat-summary summary { cursor: pointer; }
+.bank-shell .context-chat-confirm { background: #ef3124; color: #fff; border: 0; border-radius: 10px; min-height: 42px; padding: 10px 16px; font-size: 13px; }
+.context-chat-summary small { display: block; margin-top: 12px; color: #52555b; font-size: 11px; line-height: 1.6; }
+.context-chat button:focus-visible, .context-chat summary:focus-visible, .context-chat-transcript:focus-visible { outline: 2px solid #ef3124; outline-offset: 3px; }
+.context-chat ::selection { background: #ffe1dd; color: #252629; }
 @media (max-width: 600px) {
-  .context-dialogue-guide { gap: 16px; flex-direction: column; }
-  .context-dialogue-guide h2 { font-size: 19px; }
-  .context-dialogue-actions button { flex: 1 1 140px; }
-  .context-dialogue-actions { padding-bottom: 36px; }
-  .context-dialogue-answer textarea { font-size: 16px; }
+  .context-chat { margin-top: 18px; }
+  .context-chat-top { padding: 14px; }
+  .context-chat-transcript { height: clamp(280px, calc(100dvh - 370px), 500px); padding: 18px 12px; }
+  .context-chat-bubble { max-width: 90%; padding: 12px 14px; }
+  .context-chat-row { gap: 7px; }
+  .context-chat-bottom { padding: 12px; }
+  .context-chat-composer textarea { font-size: 16px; }
+  .context-chat-foot > span { display: none; }
+  .context-chat-foot { justify-content: flex-end; margin-top: 6px; }
 }

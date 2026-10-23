@@ -191,3 +191,32 @@ def test_lock_and_context_edit_during_generation(dataset, model, monkeypatch):
         assert turn(client, session).status_code == 409
         with businesses.connection() as conn:
             assert conn.execute('SELECT revision FROM context_dialogues WHERE id=?', (session['id'],)).fetchone()[0] == 0
+
+
+def test_review_corrections_are_chat_turns_with_new_evidence(dataset, model):
+    with TestClient(api.app) as client:
+        session = client.post(BASE + '/start').json()
+        request = {'dialogue_id': session['id'], 'revision': session['revision'], 'field': 'description'}
+        assert client.post(BASE + '/revise', json=request).status_code == 409
+        for _ in range(4):
+            session = turn(client, session, skip=True).json()
+        for index in range(4):
+            old = session
+            response = client.post(BASE + '/revise', json={
+                'dialogue_id': session['id'], 'revision': session['revision'], 'field': 'description'})
+            assert response.status_code == 200
+            session = response.json()
+            assert not session['ready'] and session['pending'] == ['description']
+            assert client.post(BASE + '/revise', json={
+                'dialogue_id': old['id'], 'revision': old['revision'], 'field': 'description'}).status_code == 409
+            release_cooldown(session['id'])
+            session = turn(client, session, f'Уточнённое описание {index}').json()
+            assert session['ready'] and session['draft']['description'] == f'Уточнённое описание {index}'
+            assert session['evidence']['description'][0]['quote'] == f'Уточнённое описание {index}'
+        assert session['corrections'] == 4
+        assert client.post(BASE + '/revise', json={
+            'dialogue_id': session['id'], 'revision': session['revision'], 'field': 'description'}).status_code == 429
+        saved = client.post('/api/businesses/U_26030/context', json={
+            'version': 0, **session['draft'], 'dialogue_id': session['id']}).json()
+        assert saved['answers']['description'] == 'Уточнённое описание 3'
+        assert saved['answer_provenance']['description']['source'] == 'user_confirmed_ai'
