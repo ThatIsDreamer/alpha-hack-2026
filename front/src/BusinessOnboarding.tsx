@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { OnboardingIntro } from './components/OnboardingIntro'
 import { Mascot } from './components/Mascot'
 import { SourceLogo } from './components/SourceLogo'
 import { Button } from './components/ui/button'
@@ -20,7 +19,6 @@ export default function BusinessWorkspace({ children }: { children: ReactNode })
 function CompanyWorkspace({ businessId, children }: { businessId: string; children: ReactNode }) {
   const [data, setData] = useState<Onboarding | null>(null)
   const [chosen, setChosen] = useState<string[]>([])
-  const [introComplete, setIntroComplete] = useState(false)
   const [editing, setEditing] = useState(false)
   const [context, setContext] = useState<CompanyContext | null>(null)
   const [editingContext, setEditingContext] = useState(false)
@@ -59,10 +57,9 @@ function CompanyWorkspace({ businessId, children }: { businessId: string; childr
       .catch(e => { if (!controller.signal.aborted) { setError(e.message); setLoading(false) } })
     return () => controller.abort()
   }, [businessId, retry])
-  const showIntro = !!data && !!context && !data.completed && context.status === 'draft' && !introComplete
-  const showContext = !showIntro && !!context && (context.status !== 'confirmed' || editingContext)
+  const showContext = !!context && (context.status !== 'confirmed' || editingContext)
   const needsOnboarding = !!data && (!data.completed || editing || showContext)
-  useEffect(() => { if (needsOnboarding) heading.current?.focus({ preventScroll: true }) }, [needsOnboarding, showContext, showIntro])
+  useEffect(() => { if (needsOnboarding) heading.current?.focus({ preventScroll: true }) }, [needsOnboarding, showContext])
   async function saveContext(answers: CompanyContext['answers'], dialogueId?: string) {
     if (!context || busy) return
     setBusy(true); setError('')
@@ -97,14 +94,13 @@ function CompanyWorkspace({ businessId, children }: { businessId: string; childr
   function toggle(id: string) { setChosen(values => values.includes(id) ? values.filter(value => value !== id) : [...values, id]) }
   if (data?.completed && context?.status === 'confirmed' && !editing && !editingContext) return children
   return <section className="business-onboarding" aria-labelledby="onboarding-title">
-    <div className="onboarding-heading"><h1 ref={heading} tabIndex={-1} id="onboarding-title">{showContext ? 'Контекст компании' : data?.completed ? 'Источники новостей' : 'Настроим Ньюсрум'}</h1><p className="onboarding-company">Компания {businessId}{!loading && data && !data.completed && ` · Шаг ${showIntro ? '1' : showContext ? '2' : '3'} из 3`}</p></div>
-    {showIntro && <OnboardingIntro onComplete={() => { setIntroComplete(true); window.scrollTo(0, 0) }} />}
-    {!showIntro && !showContext && !loading && <div className="onboarding-source-prompt"><Mascot size={64} expression={busy ? 'attentive' : chosen.length ? 'happy' : 'curious-right'} /><p className="onboarding-description">Из каких источников вы хотите получать новости? Выберите хотя бы один, чтобы продолжить.</p></div>}
+    <div className="onboarding-heading"><h1 ref={heading} tabIndex={-1} id="onboarding-title">{showContext ? 'Контекст компании' : data?.completed ? 'Источники новостей' : 'Настроим Ньюсрум'}</h1><p className="onboarding-company">Компания {businessId}{!loading && data && !data.completed && ` · Шаг ${showContext ? '1' : '2'} из 2`}</p></div>
+    {!showContext && !loading && <div className="onboarding-source-prompt"><Mascot size={64} expression={busy ? 'attentive' : chosen.length ? 'happy' : 'curious-right'} /><p className="onboarding-description">Из каких источников вы хотите получать новости? Выберите хотя бы один, чтобы продолжить.</p></div>}
     {loading && <p role="status" className="onboarding-status">Загружаем настройки компании…</p>}
     {error && <div role="alert" className="onboarding-error"><p>{error}</p><Button variant="secondary" onClick={() => { setLoading(true); setRetry(n => n + 1) }}>Загрузить сохранённые данные</Button></div>}
     {showContext && context && <CompanyContextDialogue key={`${businessId}:${context.version}`} context={context} busy={busy} onSave={saveContext} onCancel={context.status === 'confirmed' ? () => { setEditingContext(false); setError('') } : undefined} />}
-    {!showIntro && !showContext && data && <><div className="onboarding-selection"><span aria-live="polite">Выбрано: {chosen.length}</span><button type="button" disabled={busy} onClick={() => setChosen(data.sources.filter(source => source.enabled).map(source => source.id))}>Выбрать доступные</button><button type="button" disabled={busy || !chosen.length} onClick={() => setChosen([])}>Снять все</button></div>
+    {!showContext && data && <><div className="onboarding-selection"><span aria-live="polite">Выбрано: {chosen.length}</span><button type="button" disabled={busy} onClick={() => setChosen(data.sources.filter(source => source.enabled).map(source => source.id))}>Выбрать доступные</button><button type="button" disabled={busy || !chosen.length} onClick={() => setChosen([])}>Снять все</button></div>
     <fieldset className="onboarding-sources" disabled={busy}><legend className="bank-sr-only">Предпочитаемые источники новостей</legend>{data.sources.map(source => <label key={source.id} className={`onboarding-source ${chosen.includes(source.id) ? 'is-selected' : ''}`}><input type="checkbox" checked={chosen.includes(source.id)} onChange={() => toggle(source.id)} /><SourceLogo id={source.id} type={source.type} /><span><strong>{source.name}</strong><small>{source.type === 'telegram' ? 'Telegram' : source.type === 'rss' ? 'RSS' : 'Сайт'}{!source.enabled && ' · сбор временно отключён'}</small></span></label>)}</fieldset></>}
-    {!showIntro && !showContext && data && <div className="onboarding-footer"><p className="onboarding-note">Рекомендации для этой компании будут учитывать только выбранные доступные источники.</p><div className="onboarding-actions"><Button variant="secondary" onClick={() => { setEditingContext(true); setError('') }} disabled={busy}>Контекст компании</Button>{data.completed && <Button variant="secondary" onClick={() => { setChosen(data.source_ids); setEditing(false); setError('') }} disabled={busy}>Отмена</Button>}<Button onClick={save} disabled={busy || loading || !chosen.length}>{busy ? 'Сохраняем…' : data.completed ? 'Сохранить' : 'Сохранить и продолжить'}</Button></div></div>}
+    {!showContext && data && <div className="onboarding-footer"><p className="onboarding-note">Рекомендации для этой компании будут учитывать только выбранные доступные источники.</p><div className="onboarding-actions"><Button variant="secondary" onClick={() => { setEditingContext(true); setError('') }} disabled={busy}>Контекст компании</Button>{data.completed && <Button variant="secondary" onClick={() => { setChosen(data.source_ids); setEditing(false); setError('') }} disabled={busy}>Отмена</Button>}<Button onClick={save} disabled={busy || loading || !chosen.length}>{busy ? 'Сохраняем…' : data.completed ? 'Сохранить' : 'Сохранить и продолжить'}</Button></div></div>}
   </section>
 }

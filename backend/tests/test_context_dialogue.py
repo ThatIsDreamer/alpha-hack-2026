@@ -10,6 +10,12 @@ from backend.tests.test_businesses import dataset  # noqa: F401
 BASE = '/api/businesses/U_26030/context/dialogue'
 
 
+@pytest.fixture(autouse=True)
+def first_question(monkeypatch):
+    monkeypatch.setattr(dialogue, 'choose_first_question', lambda profile, state: dialogue.Question(
+        field=state['pending'][0], question=dialogue.QUESTIONS[state['pending'][0]]))
+
+
 @pytest.fixture
 def model(monkeypatch):
     monkeypatch.setenv('AI_API_KEY', 'test')
@@ -153,8 +159,9 @@ def test_structured_model_success_and_user_edits_provenance(dataset, monkeypatch
     def complete(**kwargs):
         payload = json.loads(kwargs['messages'][1]['content'])
         message = payload['messages'][-1]
-        result = dialogue.Extraction(value=message['text'], evidence=[dialogue.Evidence(
-            message_id=message['id'], quote=message['text'])], clarification='')
+        result = dialogue.AdaptiveTurn(updates=[dialogue.ContextUpdate(field='description',
+            value=message['text'], evidence=[dialogue.Evidence(message_id=message['id'], quote=message['text'])])],
+            next_field='counterparties', next_question=dialogue.QUESTIONS['counterparties'])
         return SimpleNamespace(usage=None, choices=[SimpleNamespace(finish_reason='stop',
             message=SimpleNamespace(refusal=None, content=result.model_dump_json()))])
     monkeypatch.setattr(dialogue, 'OpenAI', lambda **kwargs: SimpleNamespace(
@@ -220,3 +227,71 @@ def test_review_corrections_are_chat_turns_with_new_evidence(dataset, model):
             'version': 0, **session['draft'], 'dialogue_id': session['id']}).json()
         assert saved['answers']['description'] == 'Уточнённое описание 3'
         assert saved['answer_provenance']['description']['source'] == 'user_confirmed_ai'
+
+
+def test_adaptive_topics_cross_field_extraction_and_early_finish(dataset, model, monkeypatch):
+    monkeypatch.setattr(dialogue, 'choose_first_question', lambda profile, state: dialogue.Question(
+        field='priorities', question='Какие задачи бизнеса сейчас требуют внимания?'))
+    def adaptive(profile, state, field):
+        message = state['messages'][-1]
+        assert profile['counterparties']['known_companies'] == 2
+        updates = [dialogue.ContextUpdate(field=key, value=message['text'], evidence=[
+            dialogue.Evidence(message_id=message['id'], quote=message['text'])])
+            for key in ('description', 'geography')]
+        return dialogue.AdaptiveTurn(updates=updates,
+            next_field='counterparties' if state['turns'] == 0 else 'done',
+            next_question='От каких поставщиков зависит ваш бизнес?' if state['turns'] == 0 else '')
+    monkeypatch.setattr(dialogue, 'extract', adaptive)
+    with TestClient(api.app) as client:
+        session = client.post(BASE + '/start').json()
+        assert session['pending'][0] == 'priorities'
+        session = turn(client, session, 'Поставляем корм фермерам в Башкортостане').json()
+        assert session['pending'] == ['counterparties']
+        assert session['draft']['geography'] == 'Поставляем корм фермерам в Башкортостане'
+        assert session['draft']['description'] == session['draft']['geography']
+        release_cooldown(session['id'])
+        session = turn(client, session, 'Поставки идут от местных производителей').json()
+        assert session['ready'] and session['turns'] == 2
+        assert businesses.get_context('U_26030')['status'] == 'draft'
+
+
+def test_adaptive_question_cap_and_repeat_rejection(dataset, model, monkeypatch):
+    def adaptive(profile, state, field):
+        return dialogue.AdaptiveTurn(updates=[], next_field='priorities',
+            next_question=f"Какое уточнение важно для задачи номер {state['turns'] + 1}?")
+    monkeypatch.setattr(dialogue, 'extract', adaptive)
+    with TestClient(api.app) as client:
+        session = client.post(BASE + '/start').json()
+        for _ in range(6):
+            release_cooldown(session['id'])
+            session = turn(client, session).json()
+        assert session['ready'] and session['interview_turns'] == 6
+        assert len([m for m in session['messages'] if m['role'] == 'assistant']) == 6
+        other = '/api/businesses/U_2/context/dialogue'
+        session = client.post(other + '/start').json()
+        monkeypatch.setattr(dialogue, 'extract', lambda profile, state, field: dialogue.AdaptiveTurn(
+            updates=[], next_field=field, next_question=state['messages'][0]['text']))
+        assert turn(client, session, base=other).status_code == 502
+
+
+def test_first_question_receives_existing_context_relationships_and_is_cached(dataset, model, monkeypatch):
+    calls = []
+    def complete(**kwargs):
+        payload = json.loads(kwargs['messages'][1]['content']); calls.append(payload)
+        assert payload['facts']['industry_code'] == '41.2'
+        assert payload['known_answers']['description'] == 'Строим склады'
+        assert payload['counterparties']['known_companies'] == 2
+        assert payload['questions_left'] == 6
+        result = dialogue.Question(field='priorities', question='Какая задача сейчас главная для строительства складов?')
+        return SimpleNamespace(usage=None, choices=[SimpleNamespace(finish_reason='stop',
+            message=SimpleNamespace(refusal=None, content=result.model_dump_json()))])
+    monkeypatch.setattr(dialogue, 'OpenAI', lambda **kwargs: SimpleNamespace(
+        chat=SimpleNamespace(completions=SimpleNamespace(create=complete)), close=lambda: None))
+    monkeypatch.setattr(dialogue, 'choose_first_question', lambda profile, state:
+        dialogue.model_request(profile, state, dialogue.Question, 'first_question', 400))
+    with TestClient(api.app) as client:
+        client.post('/api/businesses/U_26030/context', json={'version': 0, 'description': 'Строим склады',
+            'counterparties': '', 'geography': '', 'priorities': ''})
+        first = client.post(BASE + '/start').json()
+        assert first['pending'][0] == 'priorities'
+        assert client.post(BASE + '/start').json()['id'] == first['id'] and len(calls) == 1
