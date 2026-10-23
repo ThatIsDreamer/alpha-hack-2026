@@ -48,6 +48,8 @@ def connection(write=False):
 def migrate_onboarding(conn):
     migrate_categories(conn)
     company_context.migrate(conn)
+    from . import member_context
+    member_context.migrate(conn)
     conn.execute("""CREATE TABLE IF NOT EXISTS business_onboarding (
         business_id TEXT PRIMARY KEY, source_ids TEXT NOT NULL,
         completed_at TEXT NOT NULL, updated_at TEXT NOT NULL)""")
@@ -163,8 +165,17 @@ def import_dataset(target, seed=SEED):
                         (business_id,answers,version,confirmed_at,updated_at) VALUES (?,?,?,?,?)''',
                         old.execute('SELECT business_id,answers,version,confirmed_at,updated_at FROM business_context'))
                 if old.execute("SELECT 1 FROM sqlite_master WHERE name='context_dialogues'").fetchone():
-                    conn.executemany('INSERT INTO context_dialogues VALUES (?,?,?,?,?,?,?)',
+                    conn.executemany('''INSERT INTO context_dialogues
+                        (id,business_id,base_version,revision,state,confirmed_version,created_at) VALUES (?,?,?,?,?,?,?)''',
                         old.execute('SELECT id,business_id,base_version,revision,state,confirmed_version,created_at FROM context_dialogues'))
+                if old.execute("SELECT 1 FROM sqlite_master WHERE name='context_dialogues'").fetchone() and 'member_id' in {r[1] for r in old.execute('PRAGMA table_info(context_dialogues)')}:
+                    conn.executemany('UPDATE context_dialogues SET member_id=? WHERE id=?', old.execute('SELECT member_id,id FROM context_dialogues'))
+                for table in ('company_members', 'context_proposals'):
+                    if old.execute("SELECT 1 FROM sqlite_master WHERE name=?", (table,)).fetchone():
+                        old_columns = {r[1] for r in old.execute(f'PRAGMA table_info({table})')}
+                        columns = [r[1] for r in conn.execute(f'PRAGMA table_info({table})') if r[1] in old_columns]
+                        names, placeholders = ','.join(columns), ','.join('?' for _ in columns)
+                        conn.executemany(f'INSERT INTO {table}({names}) VALUES ({placeholders})', old.execute(f'SELECT {names} FROM {table}'))
                 if old.execute("SELECT 1 FROM sqlite_master WHERE name='newsroom_welcome'").fetchone():
                     conn.executemany('INSERT INTO newsroom_welcome VALUES (?,?)',
                                      old.execute('SELECT business_id,seen_at FROM newsroom_welcome'))
@@ -237,12 +248,17 @@ def get_context(business_id: str):
 
 
 @router.post('/businesses/{business_id}/context')
-def save_context(business_id: str, payload: company_context.ContextInput):
+def save_context(business_id: str, payload: company_context.ContextInput,
+                 x_demo_user_id: str | None = Header(None, max_length=50)):
+    if x_demo_user_id:
+        raise HTTPException(403, 'Изменения общего контекста отправляются ответственному на подтверждение.')
     now = datetime.now(timezone.utc).isoformat()
     answers = {key: getattr(payload, key) for key in company_context.FIELDS}
     with connection(write=True) as conn, conn:
         if not conn.execute('SELECT 1 FROM businesses WHERE id=?', (business_id,)).fetchone():
             raise HTTPException(404, 'Компания не найдена')
+        if conn.execute('SELECT 1 FROM company_members WHERE business_id=?', (business_id,)).fetchone():
+            raise HTTPException(403, 'Для компании включены профили сотрудников. Используйте предложения ответственному.')
         if payload.dialogue_id:
             session = conn.execute('''SELECT * FROM context_dialogues
                 WHERE id=? AND business_id=? AND base_version=? AND confirmed_version IS NULL''',
@@ -310,9 +326,14 @@ def business_group(group_id: str, limit: int = Query(20, ge=1, le=50), offset: i
                 'items': [summary(r) for r in members], 'limit': limit, 'offset': offset}
 
 
-def recommendation_business(x_business_id: str = Header(..., max_length=100)):
+def recommendation_business(x_business_id: str = Header(..., max_length=100),
+                            x_demo_user_id: str | None = Header(None, max_length=50)):
     """Dependency for future recommendation routes; selection is never server state."""
-    return business_detail(x_business_id)
+    result = business_detail(x_business_id)
+    if x_demo_user_id:
+        from . import member_context
+        result['user_context'] = member_context.profile(x_business_id, x_demo_user_id)
+    return result
 
 
 if __name__ == '__main__':

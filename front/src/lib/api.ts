@@ -1,4 +1,5 @@
 import { getSelectedBusinessId } from './business-selection'
+import { getSelectedMemberId } from './member-selection'
 
 export const API = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -16,5 +17,6 @@ export function recommendationRequest<T>(path: string, options: RequestInit = {}
   if (!id) return Promise.reject(new Error('Сначала выберите компанию.'))
   const headers = new Headers(options.headers)
   headers.set('X-Business-ID', id)
+  headers.set('X-Demo-User-ID', getSelectedMemberId(id))
   return apiRequest<T>(path, { ...options, headers })
 }

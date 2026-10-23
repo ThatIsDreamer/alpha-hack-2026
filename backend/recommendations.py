@@ -19,7 +19,7 @@ from .db import Database
 router = APIRouter(prefix='/api/recommendations', tags=['Recommendations'])
 CATALOG = json.loads((Path(__file__).parent / 'alfa_services.json').read_text())
 SERVICES = {s['id']: s for s in CATALOG['services']}
-VERSION = 'recommendations-v4-company-context'
+VERSION = 'recommendations-v5-member-context'
 GATE = threading.Lock()  # Single API process: prevent duplicate/infinite parallel model spend.
 
 
@@ -67,6 +67,11 @@ def context(profile, source=None, topic=None, severity=None):
     business = {key: profile[key] for key in ('id', 'industry', 'industry_code', 'news_topics', 'region',
                                              'products', 'foreign_trade', 'countries', 'synthetic')}
     business['context'] = profile['context']
+    if profile.get('user_context'):
+        own = profile['user_context']
+        if not own['role'] or not own['confirmed']:
+            raise HTTPException(409, 'Сначала выберите роль и подтвердите личный контекст.')
+        business['user_context'] = {key: own[key] for key in ('id', 'role', 'role_label', 'version', 'answers')}
     allowed_topics = [topic] if topic and topic in topics else ([] if topic else sorted(topics))
     allowed_sources = [source] if source else selected
     db = database()
@@ -126,15 +131,31 @@ def rank_articles(articles, business, relations):
     # Only explicitly confirmed statements influence ranking; no model guesses.
     answers = company.get('answers', {}) if company.get('status') == 'confirmed' else {}
     focus = stems(' '.join(answers.get(key, '') for key in ('description', 'counterparties', 'geography', 'priorities'))) - own
+    personal = business.get('user_context', {})
+    personal_focus = stems(' '.join(personal.get('answers', {}).values()))
+    # Soft role emphasis, never a claimed company need or a hard topic exclusion.
+    role_focus = stems({
+        'owner': 'стратегия инвестиции рынок рост капитал',
+        'ceo': 'стратегия рынок операции поставки развитие',
+        'cfo': 'финансы бюджет финансирование налоги ставка',
+        'accountant': 'налоги отчётность бухгалтерия регулирование',
+        'treasury': 'ликвидность валюта платежи ставка расчёты',
+        'executive': '', 'other': '',
+    }.get(personal.get('role'), ''))
     partner = stems(' '.join(name for sector in relations['sectors'] for name in sector['industry_examples'])) - own
     macro = ['ключев', 'инфляц', 'валют', 'налог', 'постав', 'экспорт', 'импорт', 'кредит', 'логист', 'санкци']
     def score(article):
         text = (article['title'] + ' ' + article['text']).casefold()
-        return sum(4 for word in own if word in text) + sum(5 for word in focus if word in text) + sum(1 for word in partner if word in text) + sum(2 for word in macro if word in text)
+        return sum(2 for word in role_focus if word in text) + sum(6 for word in personal_focus if word in text) + sum(4 for word in own if word in text) + sum(5 for word in focus if word in text) + sum(1 for word in partner if word in text) + sum(2 for word in macro if word in text)
     return sorted(articles, key=score, reverse=True)  # Stable recency ordering on ties.
 
 
-SYSTEM = '''Ты помощник компании в Альфа-Бизнес. Верни на русском РОВНО ТРИ различных,
+SYSTEM = '''Если есть business.user_context, обращайся к конкретному сотруднику с учётом
+его role_label, личных задач personal_tasks и интересов personal_focus. Роль — это
+ракурс анализа, а не доказательство потребностей. Не подменяй цели всей компании
+личными задачами. Объясняй последствия и возможные действия в зоне ответственности
+пользователя. Не упоминай личные контексты других сотрудников: их здесь нет.
+Ты помощник компании в Альфа-Бизнес. Верни на русском РОВНО ТРИ различных,
 конкретных и обоснованных действия внутри экосистемы Альфа-Бизнес из каталога services.
 Пиши предельно кратко: title 4–8 слов, action одно предложение до 180 символов,
 rationale и relevance по одному короткому предложению. Подробности видны по раскрытию.
@@ -259,7 +280,8 @@ def recommend(source: str | None = Query(None, max_length=100), topic: str | Non
             raise HTTPException(502, 'Модель не вернула три проверяемые рекомендации. Попробуйте позже.') from error
         result.update(generated_at=datetime.now(timezone.utc).isoformat(), model=payload['model'],
                       context_version=payload['business']['context']['version'],
-                      context_snapshot=payload['business']['context'])
+                      context_snapshot=payload['business']['context'],
+                      user_context_snapshot=payload['business'].get('user_context'))
         db = database()
         try:
             with db.conn:

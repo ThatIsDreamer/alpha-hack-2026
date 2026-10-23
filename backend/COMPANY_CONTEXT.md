@@ -28,6 +28,11 @@ context is shared per company; there is no user authentication or access control
 
 ## UI
 
+The current `/news` route uses the member-first flow in [MEMBER_CONTEXT.md](MEMBER_CONTEXT.md).
+The company-only introduction described below is retained for the legacy workspace;
+member introductions are tracked per employee/company and start with role selection.
+
+
 On `/news`, the first visit for each selected company shows a feature introduction:
 news → company context → recommendations, with a «Рассказать о компании» action
 and «Позже». Both actions acknowledge the introduction through

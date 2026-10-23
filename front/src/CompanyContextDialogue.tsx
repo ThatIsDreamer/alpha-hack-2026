@@ -7,18 +7,18 @@ import { ArrowUpRight01Icon } from '@hugeicons/core-free-icons'
 import { apiRequest } from './lib/api'
 import './CompanyContextDialogue.css'
 
-type Field = keyof CompanyContext['answers']
+type Field = keyof CompanyContext['answers'] | 'personal_tasks' | 'personal_focus'
 type Message = { id: number; role: 'assistant' | 'user'; field: Field; text: string; skipped?: boolean }
 type Session = {
   id: string; revision: number; base_version: number; ai_available: boolean
-  draft: CompanyContext['answers']; evidence: Record<string, { message_id: number; quote: string }[]>
+  draft: CompanyContext['answers'] & Partial<Record<'personal_tasks' | 'personal_focus', string>>; member_id?: string; evidence: Record<string, { message_id: number; quote: string }[]>
   messages: Message[]; pending: Field[]; ready: boolean; turns: number; corrections?: number
 }
-const labels: Record<Field, string> = { description: 'Чем занимается компания', counterparties: 'Покупатели и поставщики', geography: 'Где работает бизнес', priorities: 'Текущие задачи' }
+const labels: Record<Field, string> = { description: 'Чем занимается компания', counterparties: 'Покупатели и поставщики', geography: 'Где работает бизнес', priorities: 'Общие задачи компании', personal_tasks: 'Ваши задачи и ответственность', personal_focus: 'Ваши интересы и предпочтения' }
 
-export default function CompanyContextDialogue({ context, busy, onSave, onCancel }: {
-  context: CompanyContext; busy: boolean
-  onSave: (answers: CompanyContext['answers'], dialogueId?: string) => void
+export default function CompanyContextDialogue({ context, busy, onSave, onCancel, memberId }: {
+  context: CompanyContext; busy: boolean; memberId?: string
+  onSave: (answers: CompanyContext['answers'], dialogueId?: string, revision?: number) => void
   onCancel?: () => void
 }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -39,12 +39,12 @@ export default function CompanyContextDialogue({ context, busy, onSave, onCancel
   useEffect(() => {
     mounted.current = true
     const abort = new AbortController()
-    apiRequest<{ session: Session | null }>(base, { signal: abort.signal })
-      .then(async data => data.session || apiRequest<Session>(`${base}/start`, { method: 'POST', signal: abort.signal }))
+    apiRequest<{ session: Session | null }>(base, { signal: abort.signal, headers: memberId ? { 'X-Demo-User-ID': memberId } : {} })
+      .then(async data => data.session || apiRequest<Session>(`${base}/start`, { method: 'POST', signal: abort.signal, headers: memberId ? { 'X-Demo-User-ID': memberId } : {} }))
       .then(data => { if (!abort.signal.aborted) { setSession(data); setAiAvailable(data.ai_available); setLoading(false); setError('') } })
       .catch(e => { if (!abort.signal.aborted) { setLoading(false); setError(e.message) } })
     return () => { mounted.current = false; abort.abort(); request.current?.abort() }
-  }, [base, retry])
+  }, [base, retry, memberId])
   useEffect(() => {
     const element = transcript.current
     if (element) {
@@ -65,7 +65,7 @@ export default function CompanyContextDialogue({ context, busy, onSave, onCancel
     request.current = abort
     try {
       const next = await apiRequest<Session>(`${base}/${revise ? 'revise' : 'answer'}`, {
-        method: 'POST', signal: abort.signal, headers: { 'Content-Type': 'application/json' },
+        method: 'POST', signal: abort.signal, headers: { 'Content-Type': 'application/json', ...(memberId ? { 'X-Demo-User-ID': memberId } : {}) },
         body: JSON.stringify({ dialogue_id: session.id, revision: session.revision,
           ...(revise ? { field: revise } : { answer, skip }) }),
       })
@@ -80,7 +80,7 @@ export default function CompanyContextDialogue({ context, busy, onSave, onCancel
   return <section className={`context-chat${session?.ready ? ' context-chat-ready' : ''}`} aria-label="Чат с маскотом">
     <div className="context-chat-top"><Mascot size={42} expression={processing ? 'attentive' : 'happy'} /><div><strong>Маскот Ньюсрума</strong><span>{processing ? 'Думаю над вашим ответом…' : busy ? 'Сохраняю контекст…' : 'Разберёмся в вашем бизнесе вместе'}</span></div>{onCancel && <button type="button" className="context-chat-close" disabled={blocked} onClick={onCancel}>Закрыть</button>}</div>
     <div ref={transcript} className="context-chat-transcript" role="log" aria-live="polite" aria-relevant="additions" aria-label="Сообщения" tabIndex={0}>
-      <div className="context-chat-row context-chat-assistant"><Mascot size={32} expression="happy" /><div className="context-chat-bubble"><p>Расскажите немного о компании. Я буду задавать вопросы по одному, а в конце покажу, какой контекст получился. Вы сможете всё уточнить перед сохранением.</p></div></div>
+      <div className="context-chat-row context-chat-assistant"><Mascot size={32} expression="happy" /><div className="context-chat-bubble"><p>{memberId ? 'Учту вашу роль и то, что уже известно о компании. Уточним вашу зону ответственности и задачи. Личные ответы останутся в вашем профиле, а изменения общих сведений будут предложены ответственному.' : 'Расскажите немного о компании. Я буду задавать вопросы по одному, а в конце покажу, какой контекст получился. Вы сможете всё уточнить перед сохранением.'}</p></div></div>
       {loading && <div className="context-chat-row context-chat-assistant"><div className="context-chat-bubble" role="status"><p>Секунду, открываю наш разговор…</p></div></div>}
       {session?.messages.map(message => <div key={message.id} className={`context-chat-row context-chat-${message.role === 'assistant' ? 'assistant' : 'user'}`}>
         {message.role === 'assistant' && <Mascot size={32} expression={message.id === session.messages[session.messages.length - 1].id ? 'curious-right' : 'happy'} />}
@@ -91,11 +91,11 @@ export default function CompanyContextDialogue({ context, busy, onSave, onCancel
       {!loading && !aiAvailable && <div className="context-chat-row context-chat-assistant"><Mascot size={32} expression="attentive" /><div className="context-chat-bubble"><p>Сейчас модель недоступна. Можно вернуться к разговору позже или пропустить вопросы, на которые пока нет ответа.</p></div></div>}
       {error && <div className="context-chat-row context-chat-assistant"><Mascot size={32} expression="attentive" /><div className="context-chat-bubble context-chat-error" role="alert"><p>{error}</p><button type="button" disabled={blocked} onClick={() => { setLoading(true); setRetry(value => value + 1) }}>Восстановить разговор</button></div></div>}
       {session?.ready && !processing && <div ref={summary} className="context-chat-row context-chat-assistant"><Mascot size={32} expression="happy" /><div className="context-chat-bubble context-chat-summary">
-        <p>Вот как я понял ваш бизнес. Всё верно? Если что-то нужно изменить, выберите «Уточнить» — продолжим разговор.</p>
-        <dl>{(Object.keys(labels) as Field[]).map(field => <div key={field}><dt>{labels[field]}</dt><dd>{session.draft[field] || 'Пока неизвестно'}</dd><button type="button" disabled={blocked || (session.corrections || 0) >= 4} onClick={() => void send(false, field)} aria-label={`Уточнить: ${labels[field]}`}>Уточнить</button></div>)}</dl>
+        <p>{memberId ? 'Проверьте результат. Общие сведения — предложения для ответственного. Ваши задачи и интересы — только ваш личный контекст.' : 'Вот как я понял ваш бизнес. Всё верно? Если что-то нужно изменить, выберите «Уточнить» — продолжим разговор.'}</p>
+        <dl>{(Object.keys(labels) as Field[]).filter(field => field in session.draft).map(field => <div key={field}><dt>{labels[field]}</dt><dd>{session.draft[field] || 'Пока неизвестно'}</dd><button type="button" disabled={blocked || (session.corrections || 0) >= 4} onClick={() => void send(false, field)} aria-label={`Уточнить: ${labels[field]}`}>Уточнить</button></div>)}</dl>
         {!!Object.values(session.evidence).flat().length && <details><summary>На основе ваших ответов</summary>{Object.entries(session.evidence).map(([field, items]) => <p key={field}>{items.map(item => `«${item.quote}»`).join('; ')}</p>)}</details>}
-        <Button className="context-chat-confirm" type="button" disabled={blocked} onClick={() => onSave(session.draft, session.id)}>{busy ? 'Сохраняю…' : 'Всё верно, сохранить'}</Button>
-        <small>До подтверждения рекомендации используют прежний контекст компании.</small>
+        <Button className="context-chat-confirm" type="button" disabled={blocked} onClick={() => onSave(session.draft, session.id, session.revision)}>{busy ? 'Сохраняю…' : memberId ? 'Сохранить мой контекст и отправить уточнения' : 'Всё верно, сохранить'}</Button>
+        <small>{memberId ? 'Общий контекст изменится только после подтверждения ответственного. Ваш личный контекст будет применён сразу.' : 'До подтверждения рекомендации используют прежний контекст компании.'}</small>
       </div></div>}
     </div>
     {session && !session.ready && <div className="context-chat-bottom">

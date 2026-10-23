@@ -50,7 +50,7 @@ def read(conn, profile):
     provenance = {key: {'source': 'user', 'updated_at': row['confirmed_at']}
                   for key in FIELDS if answers.get(key)}
     session = conn.execute('''SELECT id,state FROM context_dialogues
-        WHERE business_id=? AND confirmed_version=? ORDER BY created_at DESC LIMIT 1''',
+        WHERE business_id=? AND confirmed_version=? AND member_id='' ORDER BY created_at DESC LIMIT 1''',
         (profile['id'], row['version'])).fetchone()
     if session:
         state = json.loads(session['state'])

@@ -6,11 +6,11 @@ import time
 from typing import Literal
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, StrictStr
 
-from . import businesses, business_relations
+from . import businesses, business_relations, member_context
 from .company_context import FIELDS
 from .db import Database
 
@@ -21,8 +21,10 @@ QUESTIONS = {
     'counterparties': 'Кто основные покупатели и поставщики? Какие зависимости от них важны?',
     'geography': 'В каких регионах работает бизнес? Есть ли импорт или экспорт и в какие страны?',
     'priorities': 'Какие задачи сейчас важнее всего для бизнеса?',
+    'personal_tasks': 'За какие решения вы отвечаете и какие задачи сейчас важнее всего лично для вас?',
+    'personal_focus': 'Какие события вы хотите отслеживать и насколько подробные объяснения вам нужны?',
 }
-LIMITS = dict(description=1500, counterparties=1000, geography=1000, priorities=1000)
+LIMITS = dict(description=1500, counterparties=1000, geography=1000, priorities=1000, personal_tasks=1000, personal_focus=1000)
 
 
 class TurnInput(BaseModel):
@@ -43,7 +45,7 @@ class RevisionInput(BaseModel):
     model_config = ConfigDict(extra='forbid')
     dialogue_id: StrictStr = Field(max_length=36)
     revision: StrictInt = Field(ge=0)
-    field: Literal['description', 'counterparties', 'geography', 'priorities']
+    field: Literal['description', 'counterparties', 'geography', 'priorities', 'personal_tasks', 'personal_focus']
 
 
 class Extraction(BaseModel):
@@ -55,13 +57,13 @@ class Extraction(BaseModel):
 
 class Question(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    field: Literal['description', 'counterparties', 'geography', 'priorities']
+    field: Literal['description', 'counterparties', 'geography', 'priorities', 'personal_tasks', 'personal_focus']
     question: StrictStr = Field(min_length=5, max_length=280)
 
 
 class ContextUpdate(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    field: Literal['description', 'counterparties', 'geography', 'priorities']
+    field: Literal['description', 'counterparties', 'geography', 'priorities', 'personal_tasks', 'personal_focus']
     value: StrictStr = Field(max_length=1500)
     evidence: list[Evidence] = Field(max_length=6)
 
@@ -69,14 +71,21 @@ class ContextUpdate(BaseModel):
 class AdaptiveTurn(BaseModel):
     model_config = ConfigDict(extra='forbid')
     updates: list[ContextUpdate] = Field(max_length=4)
-    next_field: Literal['description', 'counterparties', 'geography', 'priorities', 'done']
+    next_field: Literal['description', 'counterparties', 'geography', 'priorities', 'personal_tasks', 'personal_focus', 'done']
     next_question: StrictStr = Field(max_length=280)
 
 
-def profile_context(business_id):
+def profile_context(business_id, member_id=None):
     profile = businesses.business_detail(business_id)
     result = dict(profile['context'])
     result['counterparties'] = business_relations.build(profile)[0]
+    if member_id:
+        own = member_context.profile(business_id, member_id)
+        if not own['role']:
+            raise HTTPException(409, 'Сначала выберите свою роль в компании.')
+        result['company_answers'] = dict(result['answers'])
+        result['answers'] = dict(result['answers'], **own['answers'])
+        result['member'] = own
     return result
 
 
@@ -89,35 +98,43 @@ def public(row):
                 ai_available=available(), **json.loads(row['state']))
 
 
-def latest(conn, business_id, version):
+def latest(conn, business_id, version, member_id=''):
     return conn.execute('''SELECT * FROM context_dialogues WHERE business_id=?
-        AND base_version=? AND confirmed_version IS NULL ORDER BY created_at DESC,rowid DESC LIMIT 1''',
-        (business_id, version)).fetchone()
+        AND base_version=? AND member_id=? AND confirmed_version IS NULL ORDER BY created_at DESC,rowid DESC LIMIT 1''',
+        (business_id, version, member_id)).fetchone()
 
 
 @router.get('/{business_id}/context/dialogue')
-def read_dialogue(business_id: str):
+def read_dialogue(business_id: str, x_demo_user_id: str | None = Header(None, max_length=50)):
     profile = businesses.get_context(business_id)
     with businesses.connection() as conn:
-        row = latest(conn, business_id, profile['version'])
+        if x_demo_user_id:
+            member_context.read(conn, business_id, x_demo_user_id)
+        row = latest(conn, business_id, profile['version'], x_demo_user_id or '')
+        if row and x_demo_user_id and json.loads(row['state']).get('member_version') != member_context.read(conn, business_id, x_demo_user_id)['version']:
+            row = None
         return {'session': public(row) if row else None, 'ai_available': available()}
 
 
 @router.post('/{business_id}/context/dialogue/start')
-def start_dialogue(business_id: str):
+def start_dialogue(business_id: str, x_demo_user_id: str | None = Header(None, max_length=50)):
     # A second StrictMode/tab request waits, then reuses the first persisted result.
     if not GATE.acquire(timeout=50):
         raise HTTPException(429, 'Подготавливаем разговор. Попробуйте через несколько секунд.')
     try:
-        profile = profile_context(business_id)
+        profile = profile_context(business_id, x_demo_user_id)
         with businesses.connection() as conn:
-            row = latest(conn, business_id, profile['version'])
-            if row:
+            row = latest(conn, business_id, profile['version'], x_demo_user_id or '')
+            if row and (not x_demo_user_id or json.loads(row['state']).get('member_version') == profile['member']['version']):
                 return public(row)
-        pending = [key for key in FIELDS if not profile['answers'][key]] or ['priorities']
+        fields = (*FIELDS, *member_context.PERSONAL_FIELDS) if x_demo_user_id else FIELDS
+        pending = [key for key in fields if not profile['answers'][key]] or ['personal_tasks' if x_demo_user_id else 'priorities']
         state = dict(draft=profile['answers'], evidence={}, pending=pending, ready=False,
                      clarifications=0, turns=0, interview_turns=0, last_attempt=0,
                      mode='adaptive-v1', messages=[])
+        if x_demo_user_id:
+            state.update(member_id=x_demo_user_id, member_version=profile['member']['version'],
+                         company_answers=profile['company_answers'], member_role=profile['member']['role_label'])
         if available():
             try:
                 first = choose_first_question(profile, state)
@@ -133,14 +150,22 @@ def start_dialogue(business_id: str):
             current = conn.execute('SELECT version FROM business_context WHERE business_id=?', (business_id,)).fetchone()[0]
             if current != profile['version']:
                 raise HTTPException(409, 'Контекст изменился. Откройте разговор заново.')
-            conn.execute('''INSERT INTO context_dialogues(id,business_id,base_version,revision,state)
-                VALUES (?,?,?,0,?)''', (session_id, business_id, profile['version'], json.dumps(state, ensure_ascii=False)))
+            conn.execute('''INSERT INTO context_dialogues(id,business_id,base_version,revision,state,member_id)
+                VALUES (?,?,?,0,?,?)''', (session_id, business_id, profile['version'], json.dumps(state, ensure_ascii=False), x_demo_user_id or ''))
             return public(conn.execute('SELECT * FROM context_dialogues WHERE id=?', (session_id,)).fetchone())
     finally:
         GATE.release()
 
 
 SYSTEM = '''Ты маскот Ньюсрума. Веди короткий полезный разговор о компании по-русски.
+Участник member имеет одну роль. Если member задан, личные personal_tasks (задачи,
+зона ответственности) и personal_focus (интересы и предпочтения объяснений) хранятся
+отдельно. Не записывай личные цели в общие priorities компании. Используй уже
+подтверждённый company_answers: следующий сотрудник уточняет их только в рамках
+своей компетенции, а не начинает анкету заново. Сначала уточни личную ответственность
+и приоритеты роли. Не требуй знать всё о компании. Не приписывай потребности только
+на основании должности. Не раскрывай чужие личные данные; их здесь нет. Изменения
+общих сведений — предложения ответственному, не подтверждённые факты.
 Темы: description (деятельность), counterparties (покупатели и поставщики), geography
 (география работы), priorities (актуальные задачи). Сам выбирай порядок и формулировку
 ОДНОГО следующего вопроса по важнейшему пробелу. Не следуй фиксированной анкете.
@@ -179,6 +204,7 @@ def model_request(profile, state, schema, task, tokens):
             messages=[{'role': 'system', 'content': SYSTEM}, {'role': 'user', 'content': json.dumps({
                 'task': task, 'facts': profile['facts'], 'known_answers': profile['answers'],
                 'counterparties': profile.get('counterparties', {}), 'draft': state['draft'],
+                'member': profile.get('member'), 'company_answers': profile.get('company_answers'),
                 'messages': state['messages'], 'max_value_lengths': LIMITS,
                 'questions_left': max(0, 6 - state.get('interview_turns', state['turns']) - (1 if task != 'first_question' else 0)),
                 'correcting': state.get('correcting', False),
@@ -217,6 +243,8 @@ def validate(result, state, field):
         answers = {m['id']: m['text'] for m in state['messages'] if m['role'] == 'user' and not m.get('skipped')}
         seen = set()
         for update in result.updates:
+            if update.field not in state['draft']:
+                raise ValueError('Unknown context block')
             if state.get('correcting') and update.field != field:
                 raise ValueError('Correction changed another block')
             if update.field in seen or len(update.value) > LIMITS[update.field]:
@@ -228,6 +256,8 @@ def validate(result, state, field):
                 if evidence.message_id not in answers or evidence.quote not in answers[evidence.message_id]:
                     raise ValueError('Unsupported citation')
         if result.next_field != 'done':
+            if result.next_field not in state['draft']:
+                raise ValueError('Unknown question topic')
             question = result.next_question.strip()
             if len(question) < 5 or any(question.casefold() == m['text'].strip().casefold()
                                        for m in state['messages'] if m['role'] == 'assistant'):
@@ -246,19 +276,22 @@ def validate(result, state, field):
 
 
 @router.post('/{business_id}/context/dialogue/answer')
-def answer_dialogue(business_id: str, payload: TurnInput):
+def answer_dialogue(business_id: str, payload: TurnInput,
+                    x_demo_user_id: str | None = Header(None, max_length=50)):
     if not payload.skip and not payload.answer.strip():
         raise HTTPException(422, 'Напишите ответ или пропустите вопрос.')
     if not GATE.acquire(blocking=False):
         raise HTTPException(429, 'Обрабатываем предыдущий ответ. Попробуйте через несколько секунд.')
     try:
-        profile = profile_context(business_id)
+        profile = profile_context(business_id, x_demo_user_id)
         with businesses.connection(write=True) as conn, conn:
-            row = conn.execute('''SELECT * FROM context_dialogues WHERE id=? AND business_id=?
-                AND confirmed_version IS NULL''', (payload.dialogue_id, business_id)).fetchone()
+            row = conn.execute('''SELECT * FROM context_dialogues WHERE id=? AND business_id=? AND member_id=?
+                AND confirmed_version IS NULL''', (payload.dialogue_id, business_id, x_demo_user_id or '')).fetchone()
             if not row or row['base_version'] != profile['version'] or row['revision'] != payload.revision:
                 raise HTTPException(409, 'Диалог или контекст изменился. Загрузите сохранённый диалог.')
             state = json.loads(row['state'])
+            if x_demo_user_id and state.get('member_version') != profile['member']['version']:
+                raise HTTPException(409, 'Ваша роль или профиль изменились. Начните актуальный разговор.')
             if state['ready']:
                 raise HTTPException(409, 'Диалог завершён. Проверьте итоговый профиль.')
             if not payload.skip and not available():
@@ -301,7 +334,7 @@ def answer_dialogue(business_id: str, payload: TurnInput):
         else:
             # Skipping is free: advance without a provider call, respecting known/asked blocks.
             answered = {m['field'] for m in state['messages'] if m['role'] == 'user'}
-            state['pending'] = [key for key in FIELDS if not state['draft'][key] and key not in answered]
+            state['pending'] = [key for key in state['draft'] if not state['draft'][key] and key not in answered]
             question = QUESTIONS[state['pending'][0]] if state['pending'] else ''
         state['correcting'] = False
         state['ready'] = not state['pending']
@@ -321,16 +354,19 @@ def answer_dialogue(business_id: str, payload: TurnInput):
 
 
 @router.post('/{business_id}/context/dialogue/revise')
-def revise_dialogue(business_id: str, payload: RevisionInput):
+def revise_dialogue(business_id: str, payload: RevisionInput,
+                    x_demo_user_id: str | None = Header(None, max_length=50)):
     profile = businesses.get_context(business_id)
     with businesses.connection(write=True) as conn, conn:
         conn.execute('BEGIN IMMEDIATE')
-        row = conn.execute('''SELECT * FROM context_dialogues WHERE id=? AND business_id=?
+        row = conn.execute('''SELECT * FROM context_dialogues WHERE id=? AND business_id=? AND member_id=?
             AND base_version=? AND revision=? AND confirmed_version IS NULL''',
-            (payload.dialogue_id, business_id, profile['version'], payload.revision)).fetchone()
+            (payload.dialogue_id, business_id, x_demo_user_id or '', profile['version'], payload.revision)).fetchone()
         if not row:
             raise HTTPException(409, 'Диалог изменился. Загрузите сохранённый разговор.')
         state = json.loads(row['state'])
+        if payload.field not in state['draft']:
+            raise HTTPException(422, 'Неизвестный блок контекста.')
         if not state['ready']:
             raise HTTPException(409, 'Сначала ответьте на текущий вопрос.')
         if state.get('corrections', 0) >= 4:

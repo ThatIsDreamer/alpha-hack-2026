@@ -9,6 +9,7 @@ import './BankMock.css'
 import alfaLogo from './assets/alfa-logo.png'
 import BusinessSelector from './BusinessSelector'
 import BusinessWorkspace from './BusinessOnboarding'
+import PersonalWorkspace from './PersonalWorkspace'
 
 const navigation = [
   { text: 'Заявки', icon: Task01Icon },
@@ -50,6 +51,7 @@ function MockWorkspace() {
 }
 export default function BankMock({ children }: { children?: ReactNode }) {
   const { pathname } = useLocation()
+  const Workspace = pathname === '/news' ? PersonalWorkspace : BusinessWorkspace
   const [dialog, setDialog] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   function show(title: string) { setDialog(title); setMenuOpen(false) }
@@ -75,12 +77,12 @@ export default function BankMock({ children }: { children?: ReactNode }) {
       <Button variant="ghost" className="bank-menu-settings" onClick={() => show('Настроить меню')}><Icon icon={Settings01Icon} size={17} />Настроить меню</Button>
     </aside>
     <main className={`bank-main ${children ? 'bank-news-main' : ''}`} id="bank-main" tabIndex={-1}>
-      <BusinessWorkspace newsroom={pathname === '/news'}>
+      <Workspace>
       {!children && <><h1 className="bank-sr-only">Альфа-Бизнес — демонстрационный макет</h1>
       <div className="bank-actions"><Button className="bank-action" variant="secondary" onClick={() => show('Скачать выписку')}><Icon icon={FileDownloadIcon} />Скачать выписку</Button><Button className="bank-action" variant="secondary" onClick={() => show('Импорт платежей')}><Icon icon={FileImportIcon} />Импорт платежей</Button><Button className="bank-action" variant="secondary" onClick={() => show('Создать платёж')}><Icon icon={DocumentValidationIcon} />Создать платёж</Button><Button className="bank-action bank-more" variant="secondary" onClick={() => show('Ещё')}>Ещё</Button></div>
       <MockWorkspace /></>}
       {children}
-      </BusinessWorkspace>
+      </Workspace>
     </main>
     <Button className="bank-chat" size="icon" aria-label="Чат поддержки — одно уведомление" onClick={() => show('Чат поддержки')}><Icon icon={Message01Icon} size={25} /><span>1</span></Button>
     <Dialog open={!!dialog} onOpenChange={open => { if (!open) setDialog('') }}><DialogContent><DialogTitle>{dialog}</DialogTitle><DialogDescription>Это демонстрационный макет. Банковские операции недоступны.</DialogDescription>{dialog === 'Все сервисы' && <Link className="bank-news-link" to="/news"><Icon icon={File01Icon} />Обзор новостей<Icon icon={ArrowRight01Icon} /></Link>}<DialogClose asChild><Button className="bank-dialog-close" variant="secondary">Понятно</Button></DialogClose></DialogContent></Dialog>

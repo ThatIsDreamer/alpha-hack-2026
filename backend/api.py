@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from .db import Database
-from . import businesses, recommendations, context_dialogue
+from . import businesses, recommendations, context_dialogue, member_context
 from .main import ROOT, run
 from .classifier import create_classifier, TOPICS, SEVERITIES
 
@@ -116,11 +116,12 @@ async def lifespan(app):
 
 app = FastAPI(title='Newsroom API', lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ORIGINS', 'http://localhost:5173').split(','),
-                   allow_methods=['GET', 'POST'], allow_headers=['Content-Type', 'X-Business-ID'])
+                   allow_methods=['GET', 'POST'], allow_headers=['Content-Type', 'X-Business-ID', 'X-Demo-User-ID'])
 
 app.include_router(businesses.router)
 app.include_router(recommendations.router)
 app.include_router(context_dialogue.router)
+app.include_router(member_context.router)
 
 @app.get('/health')
 def health():
