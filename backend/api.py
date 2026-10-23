@@ -150,10 +150,10 @@ def source_info(source_id):
 def news(source: str | None = None, limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
     db = database()
     try:
-        where, args = ('WHERE source_id=?', [source]) if source else ('', [])
+        where, args = ("WHERE status='classified' AND source_id=?", [source]) if source else ("WHERE status='classified'", [])
         total = db.conn.execute(f'SELECT count(*) FROM news {where}', args).fetchone()[0]
         rows = db.conn.execute(f'''SELECT id,source_id,title,url,published_at,discovered_at,status,topic,severity,
-            substr(text,1,240) AS excerpt FROM news {where} ORDER BY id DESC LIMIT ? OFFSET ?''', args+[limit,offset]).fetchall()
+            substr(text,1,240) AS excerpt FROM news {where} ORDER BY classified_at DESC, id DESC LIMIT ? OFFSET ?''', args+[limit,offset]).fetchall()
         return {'items': [dict(r) | source_info(r['source_id']) for r in rows], 'total': total}
     finally:
         db.conn.close()

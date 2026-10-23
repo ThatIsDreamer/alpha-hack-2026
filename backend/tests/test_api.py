@@ -19,7 +19,7 @@ def test_api_reads_persistence_and_bounds_demo(tmp_path, monkeypatch):
         assert client.post('/api/runs').status_code == 202
         assert client.post('/api/runs').status_code == 429
         assert client.get('/api/runs').json()[0]['status'] == 'completed'
-        assert client.get('/api/news').json()['total'] == 1
+        assert client.get('/api/news').json()['total'] == 0
         assert client.get('/api/news?source=other').json()['total'] == 0
         assert client.get('/api/news?limit=1000').status_code == 422
         assert client.get('/api/news/1').json()['text'] == 'Body'
@@ -62,6 +62,7 @@ def test_usage_and_source_metadata_are_exposed(tmp_path, monkeypatch):
     with TestClient(api.app) as client:
         db = api.database()
         db.insert('telegram-banksta', Item('1', 'https://t.me/banksta/1', 'News', 'Text'))
+        db.classified(1, {'topic': 'business', 'severity': 'none'}, 'test', '1')
         run_id, lock = api.reserve('scheduled')
         lock.close()
         db.record_usage(1, run_id, 'test', {'prompt_tokens': 9, 'completion_tokens': 3, 'total_tokens': 12}, False)
@@ -92,3 +93,23 @@ def test_restart_clears_stale_progress(tmp_path, monkeypatch):
         assert run['progress']['phase'] == 'interrupted'
         assert run['progress']['counts']['running'] == 0
         assert run['progress']['items'][0]['state'] == 'interrupted'
+
+
+def test_inbox_only_lists_classified_items_with_correct_pagination(tmp_path, monkeypatch):
+    monkeypatch.setenv('NEWS_DB', str(tmp_path / 'inbox.sqlite3'))
+    monkeypatch.setenv('ENABLE_SCHEDULER', 'false')
+    with TestClient(api.app) as client:
+        db = api.database()
+        for i, source in enumerate(['lenta', 'rbc', 'lenta', 'rbc'], 1):
+            db.insert(source, Item(str(i), f'https://test/{i}', str(i), 'Text'))
+        for i in (1, 2, 3):
+            db.classified(i, {'topic': 'business', 'severity': 'none'}, 'test', '1')
+        with db.conn:
+            db.conn.execute("UPDATE news SET classified_at='2026-01-01' WHERE id IN (2,3)")
+        db.conn.close()
+        page = client.get('/api/news?limit=2').json()
+        assert page['total'] == 3
+        assert [i['id'] for i in page['items']] == [1, 3]
+        assert [i['id'] for i in client.get('/api/news?limit=2&offset=2').json()['items']] == [2]
+        filtered = client.get('/api/news?source=rbc').json()
+        assert filtered['total'] == 1 and filtered['items'][0]['id'] == 2
