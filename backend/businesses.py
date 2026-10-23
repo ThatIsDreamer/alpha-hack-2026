@@ -159,6 +159,9 @@ def import_dataset(target, seed=SEED):
                     conn.executemany('''INSERT OR REPLACE INTO business_context
                         (business_id,answers,version,confirmed_at,updated_at) VALUES (?,?,?,?,?)''',
                         old.execute('SELECT business_id,answers,version,confirmed_at,updated_at FROM business_context'))
+                if old.execute("SELECT 1 FROM sqlite_master WHERE name='context_dialogues'").fetchone():
+                    conn.executemany('INSERT INTO context_dialogues VALUES (?,?,?,?,?,?,?)',
+                        old.execute('SELECT id,business_id,base_version,revision,state,confirmed_version,created_at FROM context_dialogues'))
         conn.commit()
         conn.close()
         os.replace(temp, target)
@@ -234,11 +237,20 @@ def save_context(business_id: str, payload: company_context.ContextInput):
     with connection(write=True) as conn, conn:
         if not conn.execute('SELECT 1 FROM businesses WHERE id=?', (business_id,)).fetchone():
             raise HTTPException(404, 'Компания не найдена')
+        if payload.dialogue_id:
+            session = conn.execute('''SELECT * FROM context_dialogues
+                WHERE id=? AND business_id=? AND base_version=? AND confirmed_version IS NULL''',
+                (payload.dialogue_id, business_id, payload.version)).fetchone()
+            if not session or not json.loads(session['state'])['ready']:
+                raise HTTPException(409, 'Сначала завершите диалог и проверьте итоговый профиль.')
         updated = conn.execute('''UPDATE business_context SET answers=?,version=version+1,
             confirmed_at=?,updated_at=? WHERE business_id=? AND version=?''',
             (json.dumps(answers, ensure_ascii=False), now, now, business_id, payload.version))
         if not updated.rowcount:
             raise HTTPException(409, 'Контекст изменился в другой вкладке. Откройте его заново и повторите изменения.')
+        if payload.dialogue_id:
+            conn.execute('UPDATE context_dialogues SET confirmed_version=? WHERE id=?',
+                         (payload.version + 1, payload.dialogue_id))
     return get_context(business_id)
 
 

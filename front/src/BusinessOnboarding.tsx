@@ -6,7 +6,8 @@ import { Button } from './components/ui/button'
 import { apiRequest } from './lib/api'
 import { useSelectedBusinessId } from './lib/business-selection'
 import './BusinessOnboarding.css'
-import CompanyContextForm, { type CompanyContext } from './CompanyContextForm'
+import { type CompanyContext } from './CompanyContextForm'
+import CompanyContextDialogue from './CompanyContextDialogue'
 
 type Source = { id: string; name: string; type: string; enabled: boolean }
 type Onboarding = { business_id: string; completed: boolean; source_ids: string[]; sources: Source[] }
@@ -62,13 +63,13 @@ function CompanyWorkspace({ businessId, children }: { businessId: string; childr
   const showContext = !showIntro && !!context && (context.status !== 'confirmed' || editingContext)
   const needsOnboarding = !!data && (!data.completed || editing || showContext)
   useEffect(() => { if (needsOnboarding) heading.current?.focus({ preventScroll: true }) }, [needsOnboarding, showContext, showIntro])
-  async function saveContext(answers: CompanyContext['answers']) {
+  async function saveContext(answers: CompanyContext['answers'], dialogueId?: string) {
     if (!context || busy) return
     setBusy(true); setError('')
     try {
       const saved = await apiRequest<CompanyContext>(`/api/businesses/${encodeURIComponent(businessId)}/context`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ version: context.version, ...answers }),
+        body: JSON.stringify({ version: context.version, ...answers, ...(dialogueId ? { dialogue_id: dialogueId } : {}) }),
       })
       if (!alive.current) return
       setContext(saved); setEditingContext(false)
@@ -101,7 +102,7 @@ function CompanyWorkspace({ businessId, children }: { businessId: string; childr
     {!showIntro && !showContext && !loading && <div className="onboarding-source-prompt"><Mascot size={64} expression={busy ? 'attentive' : chosen.length ? 'happy' : 'curious-right'} /><p className="onboarding-description">Из каких источников вы хотите получать новости? Выберите хотя бы один, чтобы продолжить.</p></div>}
     {loading && <p role="status" className="onboarding-status">Загружаем настройки компании…</p>}
     {error && <div role="alert" className="onboarding-error"><p>{error}</p><Button variant="secondary" onClick={() => { setLoading(true); setRetry(n => n + 1) }}>Загрузить сохранённые данные</Button></div>}
-    {showContext && context && <CompanyContextForm key={`${businessId}:${context.version}`} context={context} busy={busy} onSave={saveContext} onCancel={context.status === 'confirmed' ? () => { setEditingContext(false); setError('') } : undefined} />}
+    {showContext && context && <CompanyContextDialogue key={`${businessId}:${context.version}`} context={context} busy={busy} onSave={saveContext} onCancel={context.status === 'confirmed' ? () => { setEditingContext(false); setError('') } : undefined} />}
     {!showIntro && !showContext && data && <><div className="onboarding-selection"><span aria-live="polite">Выбрано: {chosen.length}</span><button type="button" disabled={busy} onClick={() => setChosen(data.sources.filter(source => source.enabled).map(source => source.id))}>Выбрать доступные</button><button type="button" disabled={busy || !chosen.length} onClick={() => setChosen([])}>Снять все</button></div>
     <fieldset className="onboarding-sources" disabled={busy}><legend className="bank-sr-only">Предпочитаемые источники новостей</legend>{data.sources.map(source => <label key={source.id} className={`onboarding-source ${chosen.includes(source.id) ? 'is-selected' : ''}`}><input type="checkbox" checked={chosen.includes(source.id)} onChange={() => toggle(source.id)} /><SourceLogo id={source.id} type={source.type} /><span><strong>{source.name}</strong><small>{source.type === 'telegram' ? 'Telegram' : source.type === 'rss' ? 'RSS' : 'Сайт'}{!source.enabled && ' · сбор временно отключён'}</small></span></label>)}</fieldset></>}
     {!showIntro && !showContext && data && <div className="onboarding-footer"><p className="onboarding-note">Рекомендации для этой компании будут учитывать только выбранные доступные источники.</p><div className="onboarding-actions"><Button variant="secondary" onClick={() => { setEditingContext(true); setError('') }} disabled={busy}>Контекст компании</Button>{data.completed && <Button variant="secondary" onClick={() => { setChosen(data.source_ids); setEditing(false); setError('') }} disabled={busy}>Отмена</Button>}<Button onClick={save} disabled={busy || loading || !chosen.length}>{busy ? 'Сохраняем…' : data.completed ? 'Сохранить' : 'Сохранить и продолжить'}</Button></div></div>}

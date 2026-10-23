@@ -29,9 +29,10 @@ context is shared per company; there is no user authentication or access control
 ## UI
 
 The welcome mascot introduces the newsroom, with an option to go straight to
-company setup. The next step shows known facts and four optional clarification questions. Users
-can confirm known facts with all answer fields empty. The second step retains the
-existing source picker with the mascot. The sequence is welcome → context → sources.
+company setup. The next step opens a managed interview with the mascot, or a manual
+form when preferred or when the model is unavailable. Users can confirm known
+facts with all answer fields empty. The final step retains the existing source
+picker with the mascot. The sequence is welcome → context → sources.
 Once context is confirmed, reloading an unfinished setup resumes at sources.
 Companies with saved sources but no confirmed context see
 the new context step once; source preferences remain intact. «Контекст компании»
@@ -57,3 +58,43 @@ generation lock and per-company cooldown.
 
 Local verification uses fake model responses; it does not spend production AI
 credits or change the production databases. Deploying or pushing is a separate step.
+
+## Managed interview
+
+- GET `/api/businesses/{id}/context/dialogue` resumes the unconfirmed session for
+  the current context revision, or returns null. It never calls AI.
+- POST `.../dialogue/start` creates or resumes a persisted session. No AI call.
+- POST `.../dialogue/answer` takes `dialogue_id`, `revision`, `answer`, `skip`.
+  A normal answer invokes the configured model once; skipping never invokes it.
+- The server owns the four-block sequence: activities, counterparties, operating
+  geography, priorities. Already populated blocks are not asked again; when all
+  are populated, the interview revisits current priorities. There are at most
+  four main questions plus two model-proposed clarification turns.
+- The model extracts a field value, exact user-message citations, and an optional
+  clarification question as structured JSON. Unknown IDs, nonmatching quotes,
+  wrong-field evidence, oversized values, refusal, truncation and malformed
+  output are rejected. Quotes establish traceability, not semantic truth; the
+  user must still review the proposed wording before confirmation.
+- `context_dialogues` stores history, extracted draft, evidence and revision.
+  Successful turns persist atomically. Provider failures leave the prior
+  transcript/draft intact; the UI keeps the unsent answer for retry/manual entry.
+  Sessions survive restarts and seed replacements. Company switches unmount the
+  conversation and abort client requests. Stale turns/context revisions return
+  409. An in-process lock and two-second per-session attempt cooldown bound spend;
+  failed provider attempts also count toward the cooldown. No automatic retries.
+- Completing the interview does not update the confirmed profile. The review
+  form displays extracted values and source quotes. Confirmation uses the usual
+  context POST with `dialogue_id`; unfinished, foreign-company and stale sessions
+  cannot be confirmed. Matching extracted values receive `user_confirmed_ai`
+  provenance with evidence; values edited in review receive `user` provenance.
+  Until confirmation, recommendations continue using the old context.
+- The form fallback preserves successfully extracted values and the current
+  typed answer. Overlong fallback fields require shortening rather than silent
+  truncation. A manual save retains the ordinary user provenance.
+- AI config reuses `AI_API_KEY`/`OPENAI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`.
+  API startup reads the local `.env` without overriding existing environment
+  variables. No key is embedded in the frontend. Without a key the UI explicitly
+  disables model answers and offers the form; no synthetic AI conversation is
+  presented. Provider usage is recorded as purpose `company_context`, included
+  in the service-wide usage totals. Timeout is 45 seconds, max retries 0, output
+  cap 900 tokens, and DeepSeek thinking is disabled as in existing integrations.

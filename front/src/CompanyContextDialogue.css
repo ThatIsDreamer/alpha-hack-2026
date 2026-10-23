@@ -1,0 +1,29 @@
+.context-dialogue, .context-dialogue-review { max-width: 760px; margin-top: 28px; }
+.context-dialogue-guide { display: flex; align-items: flex-start; gap: 24px; margin-bottom: 24px; }
+.context-dialogue-guide > div { min-width: 0; }
+.context-dialogue-guide h2 { font-size: 21px; line-height: 1.5; letter-spacing: -.02em; margin: 0 0 12px; overflow-wrap: anywhere; }
+.context-dialogue-guide p { font-size: 13px; line-height: 1.6; color: #52555b; margin: 0; }
+.context-dialogue-review .context-dialogue-guide p { font-size: 14px; }
+.context-dialogue-answer { display: grid; gap: 10px; font-size: 14px; font-weight: 600; }
+.context-dialogue-answer textarea { box-sizing: border-box; width: 100%; min-height: 120px; resize: vertical; background: #fff; color: #252629; border: 1px solid #c4c6cb; border-radius: 12px; padding: 14px; font: inherit; font-weight: 400; line-height: 1.6; caret-color: #ef3124; }
+.context-dialogue-answer textarea:hover { border-color: #73767b; }
+.context-dialogue-answer textarea:focus-visible, .context-dialogue-history summary:focus-visible { outline: 2px solid #ef3124; outline-offset: 3px; }
+.context-dialogue-help, .context-dialogue-notice { font-size: 12px; line-height: 1.6; color: #52555b; margin: 16px 0 24px; }
+.context-dialogue-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.bank-shell .context-dialogue-actions button { min-height: 42px; white-space: normal; font-size: 13px; border-radius: 10px; padding: 10px 16px; }
+.bank-shell .context-dialogue-actions button:last-child { background: #ef3124; color: #fff; margin-left: auto; }
+.bank-shell .context-dialogue-actions button:last-child:hover:enabled { background: #d92c20; }
+.context-dialogue-history { margin: 20px 0 24px; font-size: 13px; }
+.context-dialogue-history summary { cursor: pointer; color: #52555b; }
+.context-dialogue-history ol { list-style: none; padding: 0; max-height: 320px; overflow-y: auto; scrollbar-color: #c4c6cb transparent; }
+.context-dialogue-history li { padding: 16px 0; border-bottom: 1px solid #e1e2e5; }
+.context-dialogue-history strong { font-size: 12px; }
+.context-dialogue-history p { line-height: 1.6; margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.context-dialogue ::selection { background: #ffe1dd; color: #252629; }
+@media (max-width: 600px) {
+  .context-dialogue-guide { gap: 16px; flex-direction: column; }
+  .context-dialogue-guide h2 { font-size: 19px; }
+  .context-dialogue-actions button { flex: 1 1 140px; }
+  .context-dialogue-actions { padding-bottom: 36px; }
+  .context-dialogue-answer textarea { font-size: 16px; }
+}

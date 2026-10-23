@@ -9,10 +9,11 @@ from pathlib import Path
 import time
 
 import httpx
+from dotenv import load_dotenv
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from .db import Database
-from . import businesses, recommendations
+from . import businesses, recommendations, context_dialogue
 from .main import ROOT, run
 from .classifier import create_classifier, TOPICS, SEVERITIES
 
@@ -94,6 +95,7 @@ async def scheduler():
 
 @asynccontextmanager
 async def lifespan(app):
+    load_dotenv(ROOT.parent / '.env')
     if os.getenv('RAILWAY_ENVIRONMENT_ID'):
         mount = os.getenv('RAILWAY_VOLUME_MOUNT_PATH')
         path = Path(os.getenv('NEWS_DB', '/data/news.sqlite3')).resolve()
@@ -117,6 +119,7 @@ app.add_middleware(CORSMiddleware, allow_origins=os.getenv('CORS_ORIGINS', 'http
 
 app.include_router(businesses.router)
 app.include_router(recommendations.router)
+app.include_router(context_dialogue.router)
 
 @app.get('/health')
 def health():

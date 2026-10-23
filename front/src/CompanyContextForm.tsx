@@ -15,12 +15,14 @@ const questions = [
   { key: 'priorities', title: 'Какие задачи сейчас важнее всего?', hint: 'Например: новое оборудование, расширение или сезонные закупки.', max: 1000 },
 ] as const
 
-export default function CompanyContextForm({ context, busy, onSave, onCancel }: {
+export default function CompanyContextForm({ context, busy, onSave, onCancel, evidence }: {
   context: CompanyContext; busy: boolean
   onSave: (answers: CompanyContext['answers']) => void
   onCancel?: () => void
+  evidence?: Record<string, { quote: string }[]>
 }) {
   const [answers, setAnswers] = useState(context.answers)
+  const tooLong = questions.some(question => answers[question.key].length > question.max)
   const facts = context.facts
   const activeProducts = Object.entries(facts.products).filter(([, value]) => value === true).map(([key]) => products[key] || key)
   return <form className="company-context-form" onSubmit={event => { event.preventDefault(); onSave(answers) }}>
@@ -41,13 +43,15 @@ export default function CompanyContextForm({ context, busy, onSave, onCancel }: 
       {questions.map(question => <label key={question.key}>
         <span>{question.title}</span>
         <small id={`context-hint-${question.key}`}>{question.hint}</small>
-        <textarea value={answers[question.key]} maxLength={question.max} rows={3} aria-describedby={`context-hint-${question.key}`}
+        <textarea value={answers[question.key]} maxLength={question.max} rows={3} aria-invalid={answers[question.key].length > question.max || undefined} aria-describedby={`context-hint-${question.key}`}
           onChange={event => setAnswers(previous => ({ ...previous, [question.key]: event.target.value }))} />
+        {answers[question.key].length > question.max && <small role="alert">Сократите ответ до {question.max} символов. Сейчас: {answers[question.key].length}.</small>}
+        {!!evidence?.[question.key]?.length && <small>Основано на ваших словах: {evidence[question.key].map(item => `«${item.quote}»`).join('; ')}</small>}
       </label>)}
     </fieldset>
     <div className="onboarding-footer"><div className="onboarding-note"><p>Ответы сохранятся для этой компании и будут использоваться при подборе рекомендаций. Пустые поля останутся неизвестными.</p>{context.confirmed_at && <p>Подтверждено пользователем {new Date(context.confirmed_at).toLocaleString('ru-RU')} · версия {context.version}</p>}</div><div className="onboarding-actions">
       {onCancel && <Button type="button" variant="secondary" disabled={busy} onClick={onCancel}>Отмена</Button>}
-      <Button type="submit" disabled={busy}>{busy ? 'Сохраняем…' : context.status === 'confirmed' ? 'Сохранить контекст' : 'Подтвердить и продолжить'}</Button>
+      <Button type="submit" disabled={busy || tooLong}>{busy ? 'Сохраняем…' : context.status === 'confirmed' ? 'Сохранить контекст' : 'Подтвердить и продолжить'}</Button>
     </div></div>
   </form>
 }
