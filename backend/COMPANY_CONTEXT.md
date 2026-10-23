@@ -28,16 +28,25 @@ context is shared per company; there is no user authentication or access control
 
 ## UI
 
-For a selected company without confirmed context, the chat opens automatically.
-For a configured company, «Контекст компании» opens it on demand. The entrance is
-sequenced once per opening: mascot (0–280ms), greeting/history (180–500ms), composer
-(400–680ms). Existing messages appear as a whole, not a replay. Reduced-motion
-preferences use an 80ms fade without transforms or staggering. The final step
-retains the existing source picker: chat/context → sources.
-Once context is confirmed, reloading an unfinished setup resumes at sources.
-Companies with saved sources but no confirmed context see
-the new context step once; source preferences remain intact. «Контекст компании»
-in the newsroom opens the inline editor, with save/cancel and failure states.
+On `/news`, the first visit for each selected company shows a feature introduction:
+news → company context → recommendations, with a «Рассказать о компании» action
+and «Позже». Both actions acknowledge the introduction through
+`POST /api/businesses/{id}/onboarding/welcome`; `GET .../onboarding` exposes
+`welcome_seen`. The idempotent acknowledgment is stored in `newsroom_welcome`
+and survives restarts and seed replacements. It is separate from context confirmation
+and source setup, and is shared per company just like the rest of this demo.
+
+After acknowledgment, a compact card stays in the newsroom. The action opens the
+chat inline without a route change. Companies with confirmed context can update it;
+companies still missing sources continue with source selection after confirming.
+Closing setup preserves the draft and returns to the compact card. Recommendations
+appear once sources have been configured; no recommendation request is made before
+that. The bank homepage keeps its previous behavior.
+
+The chat entrance is sequenced once per opening: mascot (0–280ms), greeting/history
+(180–500ms), composer (400–680ms). Existing messages appear together. Reduced-motion
+preferences use an 80ms fade without transforms or staggering. The source picker
+follows context confirmation. «Контекст компании» also opens the inline editor.
 Switching companies unmounts the chat and cancels old reads. Conversation drafts
 persist automatically; only explicit confirmation updates company context.
 Context and source preferences are saved separately.

@@ -44,6 +44,27 @@ def dataset(tmp_path, monkeypatch):
     return seed, original
 
 
+def test_welcome_seen_is_per_company_idempotent_and_survives_reseed(dataset):
+    seed, original = dataset
+    with TestClient(api.app) as client:
+        path = '/api/businesses/U_26030/onboarding'
+        assert client.get(path).json()['welcome_seen'] is False
+        assert client.post(path + '/welcome').json()['welcome_seen'] is True
+        with businesses.connection() as conn:
+            first = conn.execute('SELECT seen_at FROM newsroom_welcome').fetchone()[0]
+        assert client.post(path + '/welcome').status_code == 200
+        with businesses.connection() as conn:
+            assert conn.execute('SELECT seen_at FROM newsroom_welcome').fetchone()[0] == first
+        assert client.get('/api/businesses/U_2/onboarding').json()['welcome_seen'] is False
+        assert client.get(path).json()['completed'] is False
+        assert client.post('/api/businesses/missing/onboarding/welcome').status_code == 404
+    with sqlite3.connect(businesses.db_path()) as conn:
+        conn.execute("UPDATE dataset_meta SET version='force-welcome-reseed'")
+    original(businesses.db_path(), seed)
+    with TestClient(api.app) as client:
+        assert client.get(path).json()['welcome_seen'] is True
+
+
 def test_clean_import_and_profiles(dataset):
     with TestClient(api.app) as client:
         listing = client.get('/api/businesses').json()

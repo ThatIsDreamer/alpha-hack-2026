@@ -51,6 +51,8 @@ def migrate_onboarding(conn):
     conn.execute("""CREATE TABLE IF NOT EXISTS business_onboarding (
         business_id TEXT PRIMARY KEY, source_ids TEXT NOT NULL,
         completed_at TEXT NOT NULL, updated_at TEXT NOT NULL)""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS newsroom_welcome (
+        business_id TEXT PRIMARY KEY, seen_at TEXT NOT NULL)""")
 
 
 def source_catalog():
@@ -62,6 +64,7 @@ def source_catalog():
 def onboarding_state(conn, business_id):
     row = conn.execute('SELECT * FROM business_onboarding WHERE business_id=?', (business_id,)).fetchone()
     return {'business_id': business_id, 'completed': row is not None,
+            'welcome_seen': conn.execute('SELECT 1 FROM newsroom_welcome WHERE business_id=?', (business_id,)).fetchone() is not None,
             'source_ids': json.loads(row['source_ids']) if row else [],
             'completed_at': row['completed_at'] if row else None,
             'updated_at': row['updated_at'] if row else None}
@@ -162,6 +165,9 @@ def import_dataset(target, seed=SEED):
                 if old.execute("SELECT 1 FROM sqlite_master WHERE name='context_dialogues'").fetchone():
                     conn.executemany('INSERT INTO context_dialogues VALUES (?,?,?,?,?,?,?)',
                         old.execute('SELECT id,business_id,base_version,revision,state,confirmed_version,created_at FROM context_dialogues'))
+                if old.execute("SELECT 1 FROM sqlite_master WHERE name='newsroom_welcome'").fetchone():
+                    conn.executemany('INSERT INTO newsroom_welcome VALUES (?,?)',
+                                     old.execute('SELECT business_id,seen_at FROM newsroom_welcome'))
         conn.commit()
         conn.close()
         os.replace(temp, target)
@@ -256,6 +262,16 @@ def save_context(business_id: str, payload: company_context.ContextInput):
 
 class OnboardingInput(BaseModel):
     source_ids: list[StrictStr] = Field(min_length=1, max_length=100)
+
+
+@router.post('/businesses/{business_id}/onboarding/welcome')
+def acknowledge_welcome(business_id: str):
+    with connection(write=True) as conn, conn:
+        if not conn.execute('SELECT 1 FROM businesses WHERE id=?', (business_id,)).fetchone():
+            raise HTTPException(404, 'Компания не найдена')
+        conn.execute('INSERT OR IGNORE INTO newsroom_welcome VALUES (?,?)',
+                     (business_id, datetime.now(timezone.utc).isoformat()))
+        return onboarding_state(conn, business_id)
 
 
 @router.get('/businesses/{business_id}/onboarding')

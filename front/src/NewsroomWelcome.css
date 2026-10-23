@@ -1,0 +1,31 @@
+.newsroom-intro-title { font-size: 30px; line-height: 1.25; letter-spacing: -.6px; margin: 24px 0 0; }
+.bank-shell .newsroom-setup-close { margin-top: 16px; padding: 8px 0; background: transparent; border: 0; text-decoration: underline; text-underline-offset: 3px; font-size: 13px; color: #52555b; }
+.newsroom-welcome { display: flex; gap: 32px; max-width: 1000px; padding: 32px; margin: 24px 0 32px; background: #fff; border-radius: 16px; color: #252629; }
+.newsroom-welcome-mascot { flex: 0 0 auto; padding-top: 8px; }
+.newsroom-welcome-copy { min-width: 0; flex: 1; }
+.newsroom-welcome .newsroom-welcome-copy h2 { margin: 0 0 16px; font-size: 28px; line-height: 1.2; letter-spacing: -.5px; max-width: 600px; text-wrap: balance; }
+.newsroom-welcome p { margin: 0; max-width: 68ch; font-size: 14px; line-height: 1.6; color: #52555b; }
+.newsroom-welcome-steps { padding: 0; margin: 28px 0 24px; list-style: none; counter-reset: welcome; }
+.newsroom-welcome-steps li { position: relative; padding: 0 0 20px 32px; counter-increment: welcome; }
+.newsroom-welcome-steps li:last-child { padding-bottom: 0; }
+.newsroom-welcome-steps li::before { content: counter(welcome); position: absolute; left: 0; top: 0; font-size: 14px; font-weight: 600; color: #d52b20; }
+.newsroom-welcome-steps strong, .newsroom-welcome-steps span { display: block; font-size: 14px; line-height: 1.5; }
+.newsroom-welcome-steps span { color: #52555b; margin-top: 3px; }
+.newsroom-welcome .newsroom-welcome-control { font-size: 12px; }
+.newsroom-welcome-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; align-items: center; }
+.bank-shell .newsroom-welcome-actions button { min-height: 44px; padding: 10px 18px; border-radius: 10px; font-size: 14px; }
+.bank-shell .newsroom-welcome-actions .newsroom-welcome-primary { background: #ef3124; color: #fff; border: 0; }
+.bank-shell .newsroom-welcome-actions .newsroom-welcome-primary:hover:enabled { background: #d92c20; }
+.newsroom-welcome .newsroom-welcome-error { margin-top: 12px; color: #ad271e; }
+.newsroom-welcome.is-compact { gap: 18px; padding: 22px 24px; }
+.newsroom-welcome.is-compact .newsroom-welcome-copy h2 { font-size: 18px; letter-spacing: -.2px; margin-bottom: 6px; }
+.newsroom-welcome.is-compact p { font-size: 13px; }
+.newsroom-welcome.is-compact .newsroom-welcome-actions { margin-top: 14px; }
+.newsroom-welcome ::selection { background: #ffe1dd; color: #252629; }
+@media (max-width: 600px) {
+  .newsroom-welcome { flex-direction: column; padding: 24px 20px; gap: 20px; margin-top: 20px; }
+  .newsroom-welcome-mascot { padding-top: 0; }
+  .newsroom-welcome .newsroom-welcome-copy h2 { font-size: 24px; }
+  .newsroom-welcome.is-compact { flex-direction: row; gap: 12px; padding: 20px 16px; }
+  .newsroom-welcome-actions { gap: 8px; }
+}

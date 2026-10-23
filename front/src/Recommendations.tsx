@@ -5,6 +5,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowUpRight01Icon, RefreshIcon, PlayIcon, PauseIcon, ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { Button } from './components/ui/button'
 import { RecommendationMascot } from './components/RecommendationMascot'
+import { Mascot } from './components/Mascot'
 import { SourceLogo } from './components/SourceLogo'
 import { apiRequest, recommendationRequest } from './lib/api'
 import { useSelectedBusinessId } from './lib/business-selection'
@@ -28,7 +29,14 @@ export default function Recommendations() {
   const filters = new URLSearchParams()
   for (const key of ['topic', 'severity']) if (params.get(key)) filters.set(key, params.get(key)!)
   const query = filters.toString()
-  return businessId ? <CompanyRecommendations key={`${businessId}:${query}`} businessId={businessId} query={query} /> : <section className="recommendation-empty"><h1>Рекомендации для бизнеса</h1><p>Выберите компанию в верхней панели. Подберём действия с учётом её отрасли, контрагентов и новостей.</p></section>
+  return businessId ? <CompanyRecommendations key={`${businessId}:${query}`} businessId={businessId} query={query} /> : <>
+    <h1 className="newsroom-intro-title">Ньюсрум</h1>
+    <section className="newsroom-welcome" aria-labelledby="newsroom-choose-title"><div className="newsroom-welcome-mascot"><Mascot size={112} expression="happy" /></div><div className="newsroom-welcome-copy">
+      <h2 id="newsroom-choose-title">Новости с пользой для вашего бизнеса</h2>
+      <p>Новая функция Альфа-Бизнеса поможет понять, как новости влияют на компанию и какие действия стоит рассмотреть. Выберите компанию — познакомимся с вашим бизнесом в разговоре с маскотом.</p>
+      <div className="newsroom-welcome-actions"><Button className="newsroom-welcome-primary" onClick={() => window.dispatchEvent(new Event('alfa-choose-business'))}>Выбрать компанию</Button></div>
+    </div></section>
+  </>
 }
 
 function CompanyRecommendations({ businessId, query }: { businessId: string; query: string }) {

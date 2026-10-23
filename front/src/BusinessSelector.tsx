@@ -23,13 +23,22 @@ export default function BusinessSelector() {
   const [profile, setProfile] = useState<{ id: string | null; data?: Profile; error?: string }>({ id: null })
   const reduced = useReducedMotion()
   const searchRef = useRef<HTMLInputElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const key = `${query.trim()}:${offset}:${retry}`
   const current = result.key === key ? result : undefined
   const selected = profile.id === selectedId ? profile.data : undefined
   useEffect(() => {
     const refresh = () => setRetry(n => n + 1)
+    const choose = () => {
+      triggerRef.current?.focus()
+      requestAnimationFrame(() => setOpen(true))
+    }
     window.addEventListener('alfa-onboarding-saved', refresh)
-    return () => window.removeEventListener('alfa-onboarding-saved', refresh)
+    window.addEventListener('alfa-choose-business', choose)
+    return () => {
+      window.removeEventListener('alfa-onboarding-saved', refresh)
+      window.removeEventListener('alfa-choose-business', choose)
+    }
   }, [])
   useEffect(() => {
     if (!selectedId) return
@@ -51,7 +60,7 @@ export default function BusinessSelector() {
   }, [open, query, offset, key])
 
   return <Popover.Root open={open} onOpenChange={setOpen}>
-    <Popover.Trigger asChild><Button variant="ghost" className="business-trigger" aria-label={selectedId ? `Выбрать компанию. Выбрана ${selectedId}` : 'Выбрать компанию'}>
+    <Popover.Trigger asChild><Button ref={triggerRef} variant="ghost" className="business-trigger" aria-label={selectedId ? `Выбрать компанию. Выбрана ${selectedId}` : 'Выбрать компанию'}>
       <span className="business-mark"><HugeiconsIcon icon={Building03Icon} size={19} strokeWidth={1.6} aria-hidden="true" /></span>
       <span className="business-trigger-copy"><strong>{selectedId || 'Мои компании'}</strong><small>{selected?.city || (selectedId ? 'Компания выбрана' : 'Выбрать компанию')}</small></span>
       <HugeiconsIcon icon={ArrowDown01Icon} size={14} aria-hidden="true" />

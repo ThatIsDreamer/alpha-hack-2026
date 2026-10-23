@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Add01Icon, ArrowRight01Icon, Cancel01Icon, Contact01Icon, CreditCardIcon, DashboardSquareAddIcon, DocumentValidationIcon, File01Icon, FileAttachmentIcon, FileDownloadIcon, FileImportIcon, Invoice01Icon, Logout03Icon, Mail01Icon, Menu01Icon, Message01Icon, Notification03Icon, ReceiptDollarIcon, Settings01Icon, Task01Icon, TimeQuarterPassIcon, TransactionHistoryIcon, UserGroupIcon, Wallet01Icon } from '@hugeicons/core-free-icons'
 import { Button } from './components/ui/button'
@@ -49,6 +49,7 @@ function MockWorkspace() {
   </div>
 }
 export default function BankMock({ children }: { children?: ReactNode }) {
+  const { pathname } = useLocation()
   const [dialog, setDialog] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   function show(title: string) { setDialog(title); setMenuOpen(false) }
@@ -74,7 +75,7 @@ export default function BankMock({ children }: { children?: ReactNode }) {
       <Button variant="ghost" className="bank-menu-settings" onClick={() => show('Настроить меню')}><Icon icon={Settings01Icon} size={17} />Настроить меню</Button>
     </aside>
     <main className={`bank-main ${children ? 'bank-news-main' : ''}`} id="bank-main" tabIndex={-1}>
-      <BusinessWorkspace>
+      <BusinessWorkspace newsroom={pathname === '/news'}>
       {!children && <><h1 className="bank-sr-only">Альфа-Бизнес — демонстрационный макет</h1>
       <div className="bank-actions"><Button className="bank-action" variant="secondary" onClick={() => show('Скачать выписку')}><Icon icon={FileDownloadIcon} />Скачать выписку</Button><Button className="bank-action" variant="secondary" onClick={() => show('Импорт платежей')}><Icon icon={FileImportIcon} />Импорт платежей</Button><Button className="bank-action" variant="secondary" onClick={() => show('Создать платёж')}><Icon icon={DocumentValidationIcon} />Создать платёж</Button><Button className="bank-action bank-more" variant="secondary" onClick={() => show('Ещё')}>Ещё</Button></div>
       <MockWorkspace /></>}
