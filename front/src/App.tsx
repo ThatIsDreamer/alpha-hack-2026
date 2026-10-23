@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { BrowserRouter, Link, NavLink, Route, Routes, useParams, useSearchParams, useNavigate } from 'react-router'
+import { useEffect, useRef, useState } from 'react'
+import { BrowserRouter, Link, NavLink, Route, Routes, useParams, useSearchParams, useNavigate, useLocation } from 'react-router'
 import './App.css'
 
 const labels: Record<string,string> = { politics: 'Политика', economy: 'Экономика', business: 'Бизнес', law: 'Право', society: 'Общество', technology: 'Технологии', science: 'Наука', health: 'Здоровье', environment: 'Экология', culture: 'Культура', sports: 'Спорт', other: 'Другое', none: 'Нет', low: 'Низкий', moderate: 'Умеренный', high: 'Высокий', unclear: 'Неясно' }
@@ -41,7 +41,7 @@ function Inbox() {
   const offset = Math.max(0, Number(params.get('offset')) || 0)
   const { data: overview, error: overviewError } = useData<Overview>('/api/overview')
   const { data, error } = useData<{ items: News[]; total: number }>(`/api/news?limit=20&offset=${offset}${source ? `&source=${encodeURIComponent(source)}` : ''}`)
-  return <><div className="page-heading"><div><p className="eyebrow">ЛЕНТА НОВОСТЕЙ</p><h1>Новости в одном месте.</h1><p className="intro">Материалы из открытых источников. Новые публикации — каждый час.</p></div><RunButton /></div>
+  return <><div className="page-heading"><div><h1>Новости в одном месте.</h1><p className="intro">Материалы из открытых источников. Новые публикации — каждый час.</p></div><RunButton /></div>
     {overviewError && <Notice text={overviewError} />}
     {overview && <><div className="metrics"><div><strong>{overview.total}</strong><span>Собрано материалов</span></div><div><strong>{overview.classified}</strong><span>Размечено</span></div><div><strong>{overview.pending}</strong><span>Ожидают разметки</span></div><div><strong className="time">{new Date(overview.next_run).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</strong><span>Следующий сбор · местное время</span></div></div>
     {!overview.classification_enabled && <Notice text="Сбор работает. Для определения темы и оценки репутационного риска нужен API-ключ модели." />}</>}
@@ -59,7 +59,19 @@ function Runs() {
   const [refresh, setRefresh] = useState(0)
   const { data, error } = useData<Run[]>('/api/runs', refresh)
   useEffect(() => { const timer = setInterval(() => setRefresh(n => n+1), 5000); return () => clearInterval(timer) }, [])
-  return <><div className="page-heading"><div><p className="eyebrow">ЖУРНАЛ СБОРА</p><h1>История запусков.</h1><p className="intro">Результаты пробного и почасового сбора. Обновление каждые 5 секунд.</p></div><RunButton /></div>{error && <Notice text={error} />}{!data && !error && <Notice text="Загружаем историю…" />}{data?.length === 0 && <Notice text="Запусков пока нет. Запустите пробный сбор, чтобы увидеть результат." />}<div className="run-list">{data?.map(run => <article className="run-row" key={run.id}><div className="run-top"><h2>Запуск №{run.id} <span>{run.kind === 'demo' ? 'пробный' : 'по расписанию'}</span></h2><span className={`status ${run.status}`}>{{ completed: 'Завершён', running: 'Выполняется', partial: 'Частично', failed: 'Ошибка', interrupted: 'Прерван' }[run.status] || run.status}</span></div><p>{date(run.started_at)}{run.finished_at && ` · ${Math.round(run.finished_at-run.started_at)} с`}</p>{run.result ? <dl>{Object.entries(run.result).map(([key,value]) => <div key={key}><dt>{key === 'discovered' ? 'Новых материалов' : ({ fetched: 'Текстов загружено', classified: 'Размечено', errors: 'Ошибок' }[key] || key)}</dt><dd>{value}</dd></div>)}</dl> : <p>{run.status === 'running' ? 'Проверяем источники и сохраняем тексты…' : run.error || 'Запуск был прерван.'}</p>}</article>)}</div></>
+  return <><div className="page-heading"><div><h1>История запусков.</h1><p className="intro">Результаты пробного и почасового сбора. Обновление каждые 5 секунд.</p></div><RunButton /></div>{error && <Notice text={error} />}{!data && !error && <Notice text="Загружаем историю…" />}{data?.length === 0 && <Notice text="Запусков пока нет. Запустите пробный сбор, чтобы увидеть результат." />}<div className="run-list">{data?.map(run => <article className="run-row" key={run.id}><div className="run-top"><h2>Запуск №{run.id} <span>{run.kind === 'demo' ? 'пробный' : 'по расписанию'}</span></h2><span className={`status ${run.status}`}>{{ completed: 'Завершён', running: 'Выполняется', partial: 'Частично', failed: 'Ошибка', interrupted: 'Прерван' }[run.status] || run.status}</span></div><p>{date(run.started_at)}{run.finished_at && ` · ${Math.round(run.finished_at-run.started_at)} с`}</p>{run.result ? <dl>{Object.entries(run.result).map(([key,value]) => <div key={key}><dt>{key === 'discovered' ? 'Новых материалов' : ({ fetched: 'Текстов загружено', classified: 'Размечено', errors: 'Ошибок' }[key] || key)}</dt><dd>{value}</dd></div>)}</dl> : <p>{run.status === 'running' ? 'Проверяем источники и сохраняем тексты…' : run.error || 'Запуск был прерван.'}</p>}</article>)}</div></>
 }
-function App() { return <BrowserRouter><div className="app"><header><Link className="brand" to="/"><span className="brand-mark">n.</span>Обзор<span className="demo-tag">ДЕМО</span></Link><nav aria-label="Главная навигация"><NavLink to="/" end>Публикации</NavLink><NavLink to="/runs">Запуски</NavLink><a href={`${API}/docs`} target="_blank" rel="noreferrer">API ↗</a></nav></header><main><Routes><Route path="/" element={<Inbox />} /><Route path="/news/:id" element={<Article />} /><Route path="/runs" element={<Runs />} /><Route path="*" element={<><h1>Страница не найдена.</h1><Link to="/">Вернуться к публикациям</Link></>} /></Routes></main><footer><span>Обзор / демо сбора новостей</span><span>Открытые источники · сбор каждый час</span></footer></div></BrowserRouter> }
+function RouteFocus() {
+  const { pathname } = useLocation()
+  const previous = useRef(pathname)
+  useEffect(() => {
+    if (previous.current === pathname) return
+    previous.current = pathname
+    window.scrollTo(0, 0)
+    const main = document.querySelector('main')
+    main?.focus({ preventScroll: true })
+  }, [pathname])
+  return null
+}
+function App() { return <BrowserRouter><RouteFocus /><div className="app"><header><Link className="brand" to="/"><span className="brand-mark">n.</span>Обзор<span className="demo-tag">ДЕМО</span></Link><nav aria-label="Главная навигация"><NavLink to="/" end>Публикации</NavLink><NavLink to="/runs">Запуски</NavLink><a href={`${API}/docs`} target="_blank" rel="noreferrer">API ↗</a></nav></header><main tabIndex={-1}><Routes><Route path="/" element={<Inbox />} /><Route path="/news/:id" element={<Article />} /><Route path="/runs" element={<Runs />} /><Route path="*" element={<><h1>Страница не найдена.</h1><Link to="/">Вернуться к публикациям</Link></>} /></Routes></main><footer><span>Обзор / демо сбора новостей</span><span>Открытые источники · сбор каждый час</span></footer></div></BrowserRouter> }
 export default App
