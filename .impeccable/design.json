@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-23T11:46:28.133164+00:00",
+  "title": "Design System: Alfa shell and news demo",
+  "extensions": {
+    "shadows": [
+      {
+        "name": "alfa-chat",
+        "value": "0 4px 12px #0002",
+        "purpose": "Root-route floating chat only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "alfa-skeleton",
+        "value": "none",
+        "purpose": "Static workspace; no pulse or shimmer."
+      },
+      {
+        "name": "alfa-button-transition",
+        "value": "none",
+        "purpose": "Shell button transitions are disabled."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "news-mobile-max",
+        "value": "700px"
+      },
+      {
+        "name": "alfa-mobile-max",
+        "value": "760px"
+      },
+      {
+        "name": "alfa-tablet-max",
+        "value": "1100px"
+      },
+      {
+        "name": "alfa-wide-min",
+        "value": "1500px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Alfa action",
+      "kind": "button",
+      "description": "Root-route Alfa reference mock only.",
+      "html": "<button class=\"ds-action\">Скачать выписку</button>",
+      "css": ".ds-action{font-family:Arial,Helvetica,sans-serif;background:#fff;color:#252629;height:38px;padding:0 17px;border:0;border-radius:10px;font-size:14px;font-weight:400;transition:none}.ds-action:focus-visible,.ds-more:focus-visible,.ds-nav:focus-visible{outline:2px solid #ef3124;outline-offset:4px}",
+      "refersTo": "alfa-action"
+    },
+    {
+      "name": "Alfa more",
+      "kind": "button",
+      "description": "Root-route Alfa reference mock only.",
+      "html": "<button class=\"ds-more\">Ещё</button>",
+      "css": ".ds-more{font-family:Arial,Helvetica,sans-serif;background:#e9eaed;color:#252629;height:38px;padding:0 19px;border:0;border-radius:10px;font-size:14px;transition:none}.ds-action:focus-visible,.ds-more:focus-visible,.ds-nav:focus-visible{outline:2px solid #ef3124;outline-offset:4px}",
+      "refersTo": "alfa-more"
+    },
+    {
+      "name": "Alfa newsroom navigation",
+      "kind": "nav",
+      "description": "Root-route Alfa reference mock only.",
+      "html": "<a class=\"ds-nav\" href=\"/news\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" aria-hidden=\"true\"><path d=\"M6 3h8l4 4v14H6zM14 3v5h4M9 12h6M9 16h6\"/></svg><span>Ньюсрум</span><span class=\"ds-new\">НОВОЕ</span></a>",
+      "css": ".ds-nav{font-family:Arial,Helvetica,sans-serif;display:flex;align-items:center;gap:11px;width:172px;height:38.4px;padding:0 4px;border-radius:6px;background:transparent;color:#26272a;text-decoration:none;font-size:12px}.ds-nav svg{color:#73767b}.ds-nav:hover{background:#e7e8eb}.ds-new{margin-left:auto;background:#329af5;color:#fff;font-size:8px;font-weight:600;line-height:16px;height:16px;padding:0 5px;border-radius:4px}.ds-action:focus-visible,.ds-more:focus-visible,.ds-nav:focus-visible{outline:2px solid #ef3124;outline-offset:4px}"
+    },
+    {
+      "name": "Alfa new badge",
+      "kind": "chip",
+      "description": "Root-route Alfa reference mock only.",
+      "html": "<span class=\"ds-badge\">НОВОЕ</span>",
+      "css": ".ds-badge{font-family:Arial,Helvetica,sans-serif;display:inline-block;background:#329af5;color:#fff;font-size:8px;font-weight:600;line-height:16px;padding:0 5px;border-radius:4px}",
+      "refersTo": "alfa-new-badge"
+    },
+    {
+      "name": "Alfa static panel",
+      "kind": "card",
+      "description": "Root-route Alfa reference mock only.",
+      "html": "<div class=\"ds-panel\" aria-label=\"Демонстрационный макет\"><div class=\"ds-line\"></div><div class=\"ds-balance\"></div></div>",
+      "css": ".ds-panel{background:#f9f9fa;border-radius:15px;padding:22px 20px;width:260px}.ds-line,.ds-balance{background:#e5e6e9;border-radius:5px;animation:none}.ds-line{width:46%;height:12px;margin-bottom:20px}.ds-balance{width:84%;height:32px;border-radius:7px}"
+    }
+  ],
+  "narrative": {
+    "overview": "Two route-specific visual systems coexist. The existing news interface on `/news`, `/news/:id`, and `/runs` keeps its minimal white canvas, neutral typography, sparse accent, Russian interface, and original-language source text. Its established design is preserved.\n\nThe approved `/` surface reproduces the user-supplied Alfa-Business screenshot: compact Russian banking chrome surrounding a completely static skeleton workspace. The screenshot and explicit current Russian instructions take precedence over the older English-interface assumption in PRODUCT.md. This is a scoped reference reproduction, not a replacement identity for the news product.\n",
+    "keyCharacteristics": [
+      "Preserve the news system independently of the Alfa shell.",
+      "Reproduce the supplied header, sidebar, and action buttons on `/`.",
+      "Use quiet tonal placeholders throughout the banking workspace."
+    ],
+    "rules": [
+      {
+        "name": "The Route Boundary Rule",
+        "body": "Alfa tokens must not restyle `/news`, `/news/:id`, or `/runs`.",
+        "section": "colors"
+      },
+      {
+        "name": "The Static Workspace Rule",
+        "body": "Do not add pulse, shimmer, fabricated balances, charts, or operational financial data to this mock.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do keep Alfa rules scoped to the root route and its demo overlays.",
+      "Do preserve the supplied Alfa PNG and the screenshot's shell hierarchy.",
+      "Do keep Ньюсрум linked to `/news` with НОВОЕ, and Заявки without the badge.",
+      "Do preserve the existing news and run-history design."
+    ],
+    "donts": [
+      "Don't turn static placeholders into simulated live banking content.",
+      "Don't treat static-mock review approval as approval for real banking operations."
+    ]
+  }
+}

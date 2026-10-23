@@ -1,9 +1,162 @@
-# Demo design
-Confirmed direction: minimal, white main canvas, neutral typography, accent color only;
-Russian interface, original-language source text. Operate mode: inbox, detail, run history.
+---
+name: Alfa shell and news demo
+description: Route-specific Alfa reference shell alongside the preserved news interface.
+colors:
+  news-background: "#ffffff"
+  news-text: "#202020"
+  news-secondary: "#666666"
+  news-border: "#e5e5e5"
+  news-link: "#2563eb"
+  alfa-canvas: "#f3f4f5"
+  alfa-text: "#252629"
+  alfa-navigation-text: "#26272a"
+  alfa-muted: "#73767b"
+  alfa-white: "#fff"
+  alfa-focus: "#ef3124"
+  alfa-new: "#329af5"
+  alfa-summary: "#e8e9ec"
+  alfa-panel: "#f9f9fa"
+  alfa-skeleton: "#e5e6e9"
+  alfa-hover: "#e7e8eb"
+  alfa-more: "#e9eaed"
+  alfa-chat: "#202123"
+typography:
+  news-heading:
+    fontFamily: "Manrope, sans-serif"
+    fontSize: "40px"
+    fontWeight: 600
+    lineHeight: 1.17
+    letterSpacing: "-.035em"
+  news-body:
+    fontFamily: "'DM Sans', sans-serif"
+    fontWeight: 400
+    lineHeight: 1.5
+  alfa-body:
+    fontFamily: "Arial, Helvetica, sans-serif"
+    fontSize: "13px"
+    lineHeight: 1.4
+  alfa-navigation:
+    fontFamily: "Arial, Helvetica, sans-serif"
+    fontSize: "12px"
+    fontWeight: 400
+  alfa-action:
+    fontFamily: "Arial, Helvetica, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+  alfa-badge:
+    fontFamily: "Arial, Helvetica, sans-serif"
+    fontSize: "8px"
+    fontWeight: 600
+    lineHeight: "16px"
+rounded:
+  news-button: "6px"
+  alfa-navigation: "6px"
+  alfa-action: "10px"
+  alfa-summary: "20px"
+  alfa-panel: "15px"
+  alfa-lower-panel: "16px"
+  alfa-skeleton: "5px"
+  alfa-badge: "4px"
+spacing:
+  news-desktop-gutter: "48px"
+  news-mobile-gutter: "20px"
+  alfa-action-gap: "10px"
+  alfa-summary-gap: "12px"
+  alfa-lower-gap: "20px"
+  alfa-mobile-gutter: "16px"
+components:
+  alfa-action:
+    backgroundColor: "{colors.alfa-white}"
+    typography: "{typography.alfa-action}"
+    rounded: "{rounded.alfa-action}"
+    height: "38px"
+    padding: "0 17px"
+  alfa-more:
+    backgroundColor: "{colors.alfa-more}"
+    rounded: "{rounded.alfa-action}"
+    height: "38px"
+    padding: "0 19px"
+  alfa-new-badge:
+    backgroundColor: "{colors.alfa-new}"
+    textColor: "{colors.alfa-white}"
+    typography: "{typography.alfa-badge}"
+    rounded: "{rounded.alfa-badge}"
+    padding: "0 5px"
+    height: "16px"
+---
 
-Tokens: background #ffffff; text #202020; secondary #666666; border #e5e5e5;
-source-link accent #2563eb. Manrope headings, DM Sans body with sans-serif fallback.
-Desktop content max-width 1320px, 48px side padding; mobile 20px. Header navigation,
-flat bordered story rows, native source selector, black primary action. No animation.
-State colors reserved for run statuses. Visible keyboard focus. No decorative imagery.
+# Design System: Alfa shell and news demo
+
+## Overview
+
+Two route-specific visual systems coexist. The existing news interface on `/news`, `/news/:id`, and `/runs` keeps its minimal white canvas, neutral typography, sparse accent, Russian interface, and original-language source text. Its established design is preserved.
+
+The approved `/` surface reproduces the user-supplied Alfa-Business screenshot: compact Russian banking chrome surrounding a completely static skeleton workspace. The screenshot and explicit current Russian instructions take precedence over the older English-interface assumption in PRODUCT.md. This is a scoped reference reproduction, not a replacement identity for the news product.
+
+**Key Characteristics:**
+- Preserve the news system independently of the Alfa shell.
+- Reproduce the supplied header, sidebar, and action buttons on `/`.
+- Use quiet tonal placeholders throughout the banking workspace.
+
+## Colors
+
+News tokens retain their existing roles: white canvas, dark text, gray secondary text and dividers, blue source-link accent. Status colors remain reserved for run states.
+
+Alfa tokens apply only to `/` and its demo dialog: cool gray canvas, dark compact labels, white actions, pale nested panels, and slightly darker skeleton blocks. Red identifies keyboard focus and the supplied Alfa identity; blue identifies the new navigation badge. Small company marks retain the source's distinct colors without creating a new product-wide accent palette.
+
+**The Route Boundary Rule.** Alfa tokens must not restyle `/news`, `/news/:id`, or `/runs`.
+
+## Typography
+
+News retains Manrope headings and DM Sans body text with sans-serif fallbacks. Existing heading, article, metric, and status treatments remain intact.
+
+Alfa uses the Arial/Helvetica stack evidenced in BankMock.css for this reference reproduction only. Navigation is compact; action labels are larger. The brand is 14px at weight 600, company labels 12px, secondary company text 10px, and the demo caption 11px. Do not promote this screenshot-specific stack into a new display-font recommendation for other surfaces.
+
+## Layout
+
+News retains its 1320px maximum content width, desktop side gutters, header navigation, and flat bordered story rows. At 700px and below it uses the existing mobile gutters and stacked layout.
+
+At the 1280×720 reference size, Alfa has a 48px header, fixed 200px sidebar beginning below the header, and main content beginning at x=240px with 42px right padding. The action row starts at y=58px, is 38px high, and leaves 26px before the summary. The summary starts at y=122px, is 372px tall, and uses columns `2.05fr 1fr .98fr`. Lower panels use `2.08fr 1fr 1fr`; settings stay at the sidebar bottom and chat at the viewport bottom-right. Skeleton tabs begin at y=525px and lower panels at y=577px, as derived from current CSS rather than the earlier planned coordinates.
+
+At 1100px and below, main content starts at 220px, right padding becomes 24px, summary and lower panels become two columns, and card/promo placeholders disappear. At 760px and below, the header is 58px and sticky, the 215px sidebar opens through a menu button and backdrop, main margins reset, actions form a two-column grid, and the workspace becomes one column. At 1500px and above the main element has a 1600px maximum width.
+
+## Elevation & Depth
+
+News stays flat with bordered rows. Alfa uses tonal nesting and rounded panels, without shadows on ordinary buttons. The floating chat alone has `0 4px 12px #0002`. The demo dialog uses a dim overlay (`#10111666`); the mobile menu backdrop uses `#0004`. These are local overlay treatments.
+
+## Shapes
+
+Alfa uses rounded rectangular actions, nested summary panels, smaller skeleton bars, and circular avatars/chat indicators. The summary radius becomes 17px on mobile. Lower cards use their own radius; the dialog uses 18px. News keeps its existing restrained button, selector, label, and status shapes.
+
+## Components
+
+### Alfa header and navigation
+
+Use the supplied `front/src/assets/alfa-logo.png`, rendered at 32×32px on desktop and 30×30px on mobile. This is a user-supplied identity asset, not a generated image. Hugeicons provide outline icons with stroke width 1.6; shadcn-style Button, Skeleton, and Dialog wrappers supply component structure.
+
+The first sidebar link is **Ньюсрум**, routes to `/news`, and alone carries the **НОВОЕ** badge. **Заявки** has no badge. Navigation rows are 38.4px high, with 17px icons and an 11px gap. The sidebar scrolls when needed. Header controls and other banking buttons open explanatory demo dialogs.
+
+### Alfa actions and feedback
+
+The action row reads **Скачать выписку**, **Импорт платежей**, **Создать платёж**, **Ещё**. Actions are visual demo controls; they do not execute banking requests. The dialog says: “Это демонстрационный макет. Банковские операции недоступны.” The “Все сервисы” dialog also links to `/news`.
+
+Shell buttons have no transitions. Sidebar links use the explicit hover fill. Shell links and buttons have a red 2px focus outline with 4px offset; retain the skip link, accessible icon labels, and mobile menu expanded state. Overlay focus behavior belongs to the existing dialog implementation.
+
+### Static workspace
+
+Summary, tabs, applications, conversions, and promotional areas are placeholders, not live financial content or pending network results. Skeletons explicitly disable animation; decorative groups are hidden from assistive technology. Keep the accessible demo heading and visible “Демонстрационный макет” caption.
+
+**The Static Workspace Rule.** Do not add pulse, shimmer, fabricated balances, charts, or operational financial data to this mock.
+
+### Existing news components
+
+Preserve header navigation, flat story rows, native selectors, black primary actions, source links, visible keyboard focus, and existing run status treatments. No animation or decorative imagery is added to news routes.
+
+## Do's and Don'ts
+
+- Do keep Alfa rules scoped to the root route and its demo overlays.
+- Do preserve the supplied Alfa PNG and the screenshot's shell hierarchy.
+- Do keep Ньюсрум linked to `/news` with НОВОЕ, and Заявки without the badge.
+- Do preserve the existing news and run-history design.
+- Don't turn static placeholders into simulated live banking content.
+- Don't treat static-mock review approval as approval for real banking operations.
