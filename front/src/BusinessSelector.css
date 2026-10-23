@@ -10,3 +10,6 @@
 @media(max-width:760px){.bank-shell .business-trigger{max-width:140px;padding:0 4px}.business-trigger-copy{max-width:95px}.business-trigger-copy small{display:none}.bank-shell .bank-boss{display:none}.business-picker{width:calc(100vw - 24px)}.business-results{max-height:300px}}
 
 .business-current-actions{display:flex;justify-content:space-between;gap:12px}
+
+/* Keep mobile search text large enough to avoid focus zoom in iOS Safari. */
+@media(max-width:760px),(pointer:coarse){.business-search input{font-size:16px}}
