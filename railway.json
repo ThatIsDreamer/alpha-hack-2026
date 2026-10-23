@@ -1,10 +1,13 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
-  "build": {"builder": "DOCKERFILE", "dockerfilePath": "Dockerfile"},
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "Dockerfile"
+  },
   "deploy": {
-    "startCommand": "python -m backend.railway_job",
-    "cronSchedule": "0 * * * *",
-    "restartPolicyType": "NEVER",
-    "numReplicas": 1
+    "startCommand": "python -m backend.serve",
+    "restartPolicyType": "ON_FAILURE",
+    "numReplicas": 1,
+    "healthcheckPath": "/health"
   }
 }

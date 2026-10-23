@@ -92,28 +92,48 @@ local test does not install a background process. Configure log rotation on that
 
 Classifier schema follows https://developers.openai.com/api/docs/guides/structured-outputs.
 
-## Railway
+## Local demo and FastAPI
 
-The root Dockerfile builds only the Python backend. `railway.json` runs it hourly
-(`0 * * * *`, UTC), with one replica and no automatic restart after completion.
-Attach a persistent Railway volume at `/data`; `NEWS_DB=/data/news.sqlite3` is the
-container default. The Railway entrypoint refuses to run without a volume or if
-the database path is outside its mount. SQLite's database, WAL, and lock files all
-live on that volume and survive redeployments. No public domain is needed for this
-scheduled worker.
+```sh
+.venv/bin/pip install -r backend/requirements.txt
+.venv/bin/python -m backend.serve
+# In another terminal:
+cd front
+npm ci
+npm run dev
+```
 
-Set AI_API_KEY (or OPENAI_API_KEY), AI_BASE_URL if using a proxy, and AI_MODEL as
-Railway service variables. Without an API key the worker collects and persists text
-only, leaving classification queued until credentials are configured. The example
-.env file is not copied into the image. The Railway service deploys from `ThatIsDreamer/alpha-hack-2026`, branch `main`.
-Pushes to that branch trigger GitHub-backed deployments.
+Open http://localhost:5173; API docs are at http://localhost:8000/docs.
+The frontend defaults to the local API; set VITE_API_URL for another endpoint.
+The API defaults to the persistent local database backend/data/news.sqlite3.
+Set ENABLE_SCHEDULER=false for local tests without hourly collection.
 
-Deployment created for this repository:
-- Project: `76ae1d1a-80ef-4246-8ff8-c26f56328361`
-- Production environment: `4d02dfe0-c018-4fb4-a778-53f62da533ab`
-- Worker service: `64d3cbb9-e4eb-4397-9fac-d1a7de63f756`
-- Volume: `5ffcfdc9-3697-4656-9630-89dd87b76b20`, mounted at `/data` (5 GB).
+Endpoints: GET /health, /api/overview, /api/news (source, limit, offset),
+/api/news/{id}, /api/runs; POST /api/runs starts a bounded scrape-only demo job.
+Demo jobs discover at most 5 entries per enabled source, fetch at most 5 articles,
+and have a global persisted five-minute cooldown. They never call the model.
+Run history records real counts and failures, and interrupted runs on restart.
 
-The hourly schedule and NEVER restart policy are also set directly on the Railway
-service. Railway warns that legacy railway.json support ends on 2026-12-01; these
-server-side settings remain configured independently of that file.
+## Railway deployment
+
+Both services deploy from ThatIsDreamer/alpha-hack-2026 main via GitHub.
+- API: https://alpha-hack-2026-production.up.railway.app
+- Frontend: https://newsroom-web-production-32f5.up.railway.app
+- API service: 64d3cbb9-e4eb-4397-9fac-d1a7de63f756; root checkout Dockerfile.
+- Frontend service: c547e564-f7e4-4a52-b333-0cd322b4286b; root directory /front.
+- Project: 76ae1d1a-80ef-4246-8ff8-c26f56328361
+- Production environment: 4d02dfe0-c018-4fb4-a778-53f62da533ab
+- Existing volume: 5ffcfdc9-3697-4656-9630-89dd87b76b20 at /data (5 GB).
+
+The API is now always on and owns the hourly scheduler. Railway's old cron schedule
+must be disabled; start command is python -m backend.serve. Exactly one process and
+one replica must run against this SQLite volume. Runs use the same OS lock as the CLI.
+The hourly scheduler fires at the next UTC hour and skips if another run is active;
+it does not backfill missed hours during downtime. Existing articles remain in
+/data/news.sqlite3. A shared database/job queue is needed before scaling replicas.
+
+API variables: PORT=8000, NEWS_DB=/data/news.sqlite3, CORS_ORIGINS set to the frontend
+origin plus http://localhost:5173. AI_API_KEY (or OPENAI_API_KEY), AI_BASE_URL and
+AI_MODEL enable scheduled classification; without credentials only text is collected.
+Frontend build variable: VITE_API_URL points to the public API domain. It is not a secret.
+The frontend Dockerfile builds Vite and serves SPA fallback routes with nginx on 8080.

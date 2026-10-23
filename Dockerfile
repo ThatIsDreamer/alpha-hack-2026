@@ -4,4 +4,4 @@ WORKDIR /app
 COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend /app/backend
-CMD ["python", "-m", "backend.railway_job"]
+CMD ["python", "-m", "backend.serve"]
