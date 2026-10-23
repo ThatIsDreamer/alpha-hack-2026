@@ -1,5 +1,6 @@
 """Run once per cron invocation: python -m backend.main."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import fcntl
 import json
 import logging
@@ -18,7 +19,10 @@ log = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parent
 
 
-def run(db, sources, client, classifier=None, limit=100):
+def run(db, sources, client, classifier=None, limit=100, run_id=None):
+    workers = int(os.getenv('AI_CONCURRENCY', '5'))
+    if not 1 <= workers <= 20:
+        raise ValueError('AI_CONCURRENCY must be between 1 and 20')
     collectors = {s['id']: COLLECTORS[s['type']](s, client) for s in sources if s.get('enabled', True)}
     stats = dict(discovered=0, fetched=0, classified=0, errors=0)
     for source_id, collector in collectors.items():
@@ -45,15 +49,31 @@ def run(db, sources, client, classifier=None, limit=100):
             stats['errors'] += 1
             log.warning('Fetch failed for item %s: %s', row['id'], type(error).__name__)
     if classifier:
-        for row in db.pending('pending_classification', limit):
+        def classify(row):
+            text = row['title'] + '\n\n' + row['text']
+            if hasattr(classifier, 'classify_with_usage'):
+                return classifier.classify_with_usage(text)
             try:
-                labels = classifier.classify(row['title'] + '\n\n' + row['text'])
-                db.classified(row['id'], labels, classifier.model, VERSION)
-                stats['classified'] += 1
+                return classifier.classify(text), None, None
             except Exception as error:
-                db.failed(row['id'], error)
-                stats['errors'] += 1
-                log.warning('Classification failed for item %s: %s', row['id'], type(error).__name__)
+                return None, None, error
+
+        rows = db.pending('pending_classification', limit)
+        log.info('Classifying %s items with up to %s concurrent requests', len(rows), workers)
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(classify, row): row for row in rows}
+            for future in as_completed(futures):
+                row = futures[future]
+                labels, usage, error = future.result()
+                # SQLite stays on the owning thread; persist each response immediately.
+                db.record_usage(row['id'], run_id, classifier.model, usage, error is not None)
+                if error is None:
+                    db.classified(row['id'], labels, classifier.model, VERSION)
+                    stats['classified'] += 1
+                else:
+                    db.failed(row['id'], error)
+                    stats['errors'] += 1
+                    log.warning('Classification failed for item %s: %s', row['id'], type(error).__name__)
     return stats
 
 

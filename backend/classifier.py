@@ -13,7 +13,17 @@ class OpenAIClassifier:
         self.client = client or OpenAI(api_key=os.getenv('OPENAI_API_KEY') or os.getenv('AI_API_KEY'),
                                        base_url=os.getenv('AI_BASE_URL') or None, timeout=45, max_retries=2)
 
+    def classify_with_usage(self, text):
+        usage = []
+        try:
+            return self._classify(text, usage.append), usage[0] if usage else None, None
+        except Exception as error:
+            return None, usage[0] if usage else None, error
+
     def classify(self, text):
+        return self._classify(text)
+
+    def _classify(self, text, record_usage=None):
         schema = {'type': 'object', 'properties': {
             'topic': {'type': 'string', 'enum': TOPICS},
             'severity': {'type': 'string', 'enum': SEVERITIES}},
@@ -32,6 +42,9 @@ class OpenAIClassifier:
                 'criticism, failure or alleged misconduct; high: alleged serious crime, corruption, major '
                 'scandal or grave harm; unclear: no identifiable main subject, ambiguous or insufficient context.'},
                 {'role': 'user', 'content': text[:12000]}])
+        if record_usage and getattr(result, 'usage', None):
+            record_usage({key: getattr(result.usage, key, None)
+                          for key in ('prompt_tokens', 'completion_tokens', 'total_tokens')})
         choice = result.choices[0]
         if choice.finish_reason != 'stop' or choice.message.refusal:
             raise ValueError(f'Classification incomplete or refused (finish_reason={choice.finish_reason})')

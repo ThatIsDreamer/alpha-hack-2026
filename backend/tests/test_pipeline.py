@@ -94,3 +94,41 @@ def test_deepseek_disables_thinking_for_small_token_budget(monkeypatch):
         return SimpleNamespace(choices=[SimpleNamespace(finish_reason='stop', message=SimpleNamespace(content='{"topic":"business","severity":"none"}', refusal=None))])
     client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
     assert OpenAIClassifier(client).classify('Company revenue grew') == {'topic':'business','severity':'none'}
+
+
+def test_parallel_marking_preserves_usage_and_retries(tmp_path, monkeypatch):
+    from threading import Barrier
+    from backend.collectors.base import Item
+    monkeypatch.setenv('AI_CONCURRENCY', '2')
+    db = Database(tmp_path / 'parallel.sqlite3')
+    for i in range(5):
+        item = Item(str(i), f'https://test/{i}', str(i), 'Body')
+        db.insert('test', item)
+        db.fetched(i + 1, item)
+    barrier = Barrier(2, timeout=5)
+    class Classifier:
+        model = 'fake'
+        def classify_with_usage(self, text):
+            barrier.wait()  # A serial implementation cannot pass this.
+            error = ValueError('bad output') if text.startswith('1\n') else None
+            return {'topic': 'business', 'severity': 'none'}, {'prompt_tokens': 10, 'completion_tokens': 2, 'total_tokens': 12}, error
+    with httpx.Client() as client:
+        stats = run(db, [], client, Classifier(), limit=4, run_id=7)
+    assert stats['classified'] == 3 and stats['errors'] == 1
+    assert db.usage(7)['total_tokens'] == 48
+    assert db.usage(7)['requests'] == 4
+    assert db.conn.execute('SELECT attempts FROM news WHERE id=2').fetchone()[0] == 1
+    assert db.conn.execute('SELECT status FROM news WHERE id=5').fetchone()[0] == 'pending_classification'
+    db.conn.close()
+    reopened = Database(tmp_path / 'parallel.sqlite3')
+    assert reopened.usage()['total_tokens'] == 48
+    assert reopened.usage(8)['total_tokens'] == 0
+
+
+def test_usage_retained_for_rejected_output():
+    result = SimpleNamespace(usage=SimpleNamespace(prompt_tokens=20, completion_tokens=64, total_tokens=84),
+        choices=[SimpleNamespace(finish_reason='length', message=SimpleNamespace(content='', refusal=None))])
+    client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=lambda **kwargs: result)))
+    labels, usage, error = OpenAIClassifier(client).classify_with_usage('text')
+    assert labels is None and isinstance(error, ValueError)
+    assert usage['total_tokens'] == 84

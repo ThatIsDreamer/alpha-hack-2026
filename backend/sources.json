@@ -4,14 +4,16 @@
     "type": "rss",
     "url": "https://lenta.ru/rss",
     "fetch_articles": true,
-    "max_items": 50
+    "max_items": 50,
+    "name": "Лента.ру"
   },
   {
     "id": "kommersant",
     "type": "rss",
     "url": "https://www.kommersant.ru/RSS/main.xml",
     "fetch_articles": true,
-    "max_items": 50
+    "max_items": 50,
+    "name": "Коммерсантъ"
   },
   {
     "id": "telegram-example",
@@ -19,7 +21,8 @@
     "channel": "rian_ru",
     "max_pages": 2,
     "enabled": false,
-    "max_items": 50
+    "max_items": 50,
+    "name": "@rian_ru"
   },
   {
     "id": "telegram-bankrollo",
@@ -27,7 +30,8 @@
     "channel": "bankrollo",
     "max_pages": 2,
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "@bankrollo"
   },
   {
     "id": "rbc",
@@ -37,7 +41,8 @@
     "max_items": 50,
     "enabled": true,
     "content_field": "rbc_news_full-text",
-    "notes": "Полный текст из расширения официальной RSS; отдельные страницы могут требовать авторизацию."
+    "notes": "Полный текст из расширения официальной RSS; отдельные страницы могут требовать авторизацию.",
+    "name": "РБК"
   },
   {
     "id": "rosstat",
@@ -46,7 +51,8 @@
     "fetch_articles": true,
     "verify_tls": false,
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "Росстат"
   },
   {
     "id": "moex",
@@ -55,7 +61,8 @@
     "fetch_articles": false,
     "max_items": 50,
     "enabled": true,
-    "notes": "Текст публикации из content:encoded официальной RSS."
+    "notes": "Текст публикации из content:encoded официальной RSS.",
+    "name": "Московская биржа"
   },
   {
     "id": "cbr",
@@ -63,7 +70,8 @@
     "url": "https://www.cbr.ru/rss/eventrss",
     "fetch_articles": true,
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "Банк России"
   },
   {
     "id": "pravo",
@@ -72,7 +80,8 @@
     "fetch_articles": false,
     "notes": "Официальная RSS-лента: название, номер и дата акта. Полный текст документов/PDF не извлекается. HTTPS недоступен, используется официальный HTTP endpoint.",
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "Правовые акты"
   },
   {
     "id": "vedomosti",
@@ -81,7 +90,8 @@
     "fetch_articles": true,
     "notes": "Только общедоступный текст; платные материалы могут быть неполными.",
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "Ведомости"
   },
   {
     "id": "worldbank-commodities",
@@ -90,7 +100,8 @@
     "link_selector": "a[href*=\"www.worldbank.org/en/news/press-release/\"]",
     "notes": "Пресс-релизы Commodity Markets. Таблицы цен XLS и PDF-отчёты не импортируются.",
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "Всемирный банк"
   },
   {
     "id": "gdelt-russian",
@@ -99,7 +110,8 @@
     "fetch_articles": true,
     "notes": "Все темы на русском языке: до 50 последних ссылок за час, не полный архив. Возможны HTTP 429 со стороны GDELT.",
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "GDELT"
   },
   {
     "id": "telegram-bazabazon",
@@ -107,7 +119,8 @@
     "channel": "bazabazon",
     "max_pages": 2,
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "Baza"
   },
   {
     "id": "telegram-forbesrussia",
@@ -115,7 +128,8 @@
     "channel": "forbesrussia",
     "max_pages": 2,
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "Forbes Россия"
   },
   {
     "id": "telegram-b_retail",
@@ -123,7 +137,8 @@
     "channel": "b_retail",
     "max_pages": 2,
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "Беспощадный ритейл"
   },
   {
     "id": "telegram-svobodakassa",
@@ -131,7 +146,8 @@
     "channel": "svobodakassa",
     "max_pages": 2,
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "FMCG"
   },
   {
     "id": "telegram-domostroy_channel",
@@ -139,7 +155,8 @@
     "channel": "domostroy_channel",
     "max_pages": 2,
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "Строительство"
   },
   {
     "id": "telegram-centralbank_russia",
@@ -147,7 +164,8 @@
     "channel": "centralbank_russia",
     "max_pages": 2,
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "Банк России"
   },
   {
     "id": "telegram-banksta",
@@ -155,6 +173,7 @@
     "channel": "banksta",
     "max_pages": 2,
     "max_items": 50,
-    "enabled": true
+    "enabled": true,
+    "name": "Банкста"
   }
 ]

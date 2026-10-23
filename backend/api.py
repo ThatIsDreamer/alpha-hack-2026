@@ -63,7 +63,7 @@ def execute(run_id, lock, kind):
         if os.getenv('AI_API_KEY') or os.getenv('OPENAI_API_KEY'):
             classifier = create_classifier()
         with httpx.Client(timeout=25, follow_redirects=True, headers={'User-Agent': 'NewsIngest/0.1'}) as client:
-            result = run(db, sources, client, classifier, limit=5 if kind == 'demo' else 100)
+            result = run(db, sources, client, classifier, limit=5 if kind == 'demo' else 100, run_id=run_id)
         with db.conn:
             db.conn.execute('UPDATE runs SET status=?, result=?, finished_at=? WHERE id=?',
                             ('partial' if result['errors'] else 'completed', json.dumps(result), time.time(), run_id))
@@ -125,11 +125,20 @@ def overview():
         classified = db.conn.execute("SELECT count(*) FROM news WHERE status='classified'").fetchone()[0]
         sources = json.loads((ROOT / 'sources.json').read_text())
         return {'total': total, 'classified': classified, 'pending': total-classified,
+                'usage': db.usage(),
                 'classification_enabled': bool(os.getenv('AI_API_KEY') or os.getenv('OPENAI_API_KEY')),
-                'sources': [{'id': s['id'], 'type': s['type'], 'enabled': s.get('enabled', True)} for s in sources],
+                'sources': [{'id': s['id'], 'type': s['type'], 'name': s.get('name', s['id']), 'enabled': s.get('enabled', True)} for s in sources],
                 'next_run': datetime.fromtimestamp((int(time.time()) // 3600 + 1)*3600, timezone.utc).isoformat()}
     finally:
         db.conn.close()
+
+
+def source_info(source_id):
+    sources = json.loads((ROOT / 'sources.json').read_text())
+    source = next((s for s in sources if s['id'] == source_id), {})
+    return {'source_type': source.get('type', 'website'),
+            'source_name': source.get('name', source_id),
+            'source_channel': source.get('channel')}
 
 
 @app.get('/api/news')
@@ -140,7 +149,7 @@ def news(source: str | None = None, limit: int = Query(20, ge=1, le=100), offset
         total = db.conn.execute(f'SELECT count(*) FROM news {where}', args).fetchone()[0]
         rows = db.conn.execute(f'''SELECT id,source_id,title,url,published_at,discovered_at,status,topic,severity,
             substr(text,1,240) AS excerpt FROM news {where} ORDER BY id DESC LIMIT ? OFFSET ?''', args+[limit,offset]).fetchall()
-        return {'items': [dict(r) for r in rows], 'total': total}
+        return {'items': [dict(r) | source_info(r['source_id']) for r in rows], 'total': total}
     finally:
         db.conn.close()
 
@@ -152,7 +161,7 @@ def article(item_id: int):
         row = db.conn.execute('SELECT * FROM news WHERE id=?', (item_id,)).fetchone()
         if not row:
             raise HTTPException(404, 'Материал не найден')
-        item = dict(row)
+        item = dict(row) | source_info(row['source_id'])
         item.pop('last_error', None)
         item['metadata'] = json.loads(item['metadata'])
         return item
@@ -166,6 +175,7 @@ def runs():
     try:
         items = [dict(r) for r in db.conn.execute('SELECT * FROM runs ORDER BY id DESC LIMIT 30')]
         for item in items:
+            item['usage'] = db.usage(item['id'])
             item['result'] = json.loads(item['result']) if item['result'] else None
         return items
     finally:
