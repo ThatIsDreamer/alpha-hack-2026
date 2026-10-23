@@ -29,3 +29,20 @@
   .context-facts dl > div { grid-template-columns: 1fr; gap: 4px; }
   .onboarding-actions { flex-wrap: wrap; }
 }
+.onboarding-conversation{display:flex;align-items:flex-start;gap:28px;max-width:820px;margin:64px auto 80px}
+.onboarding-mascot{flex:0 0 132px;padding-top:16px}
+.onboarding-chat{background:#fff;border-radius:16px;padding:32px;flex:1;min-width:0}
+.business-onboarding .onboarding-chat-text{font-size:21px;line-height:1.65;margin:0;min-height:210px;color:#252629;overflow-wrap:break-word}
+.onboarding-inline-source{display:inline;white-space:nowrap;font-weight:500}
+.onboarding-inline-source .source-logo{display:inline-flex;vertical-align:-4px;margin-right:5px}
+.onboarding-chat-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:28px}
+.bank-shell .onboarding-chat-actions button{font-family:inherit;font-size:13px;min-height:42px}
+.bank-shell .onboarding-chat-actions button:last-child{background:#ef3124;color:#fff;border:0;border-radius:10px;padding:10px 18px}
+.bank-shell .onboarding-chat-actions button:last-child:hover{background:#d92c20}
+.bank-shell .onboarding-chat-actions .onboarding-skip{background:transparent;border:0;color:#52555b;padding:8px 0;text-decoration:underline;text-underline-offset:3px}
+.onboarding-source-prompt{display:flex;align-items:center;gap:18px;margin:24px 0}
+.business-onboarding .onboarding-source-prompt .onboarding-description{margin:0}
+@media(max-width:600px){.onboarding-conversation{flex-direction:column;gap:16px;margin:24px 0 40px}.onboarding-mascot{flex-basis:auto;padding:0;align-self:center}.onboarding-chat{padding:24px;width:100%}.business-onboarding .onboarding-chat-text{font-size:18px;min-height:240px}.onboarding-chat-actions{flex-wrap:wrap;gap:12px}.onboarding-chat-actions button:last-child{margin-left:auto}}
+
+.onboarding-message-stage{overflow:hidden;padding:8px 0;margin:-8px 0;min-height:226px}
+@media(max-width:600px){.onboarding-message-stage{min-height:256px}}

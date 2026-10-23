@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
-import { useReducedMotion } from 'motion/react'
+import { motion, useReducedMotion } from 'motion/react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowUpRight01Icon, RefreshIcon, PlayIcon, PauseIcon, ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { Button } from './components/ui/button'
+import { RecommendationMascot } from './components/RecommendationMascot'
 import { SourceLogo } from './components/SourceLogo'
 import { apiRequest, recommendationRequest } from './lib/api'
 import { useSelectedBusinessId } from './lib/business-selection'
@@ -38,6 +39,8 @@ function CompanyRecommendations({ businessId, query }: { businessId: string; que
   const [retry, setRetry] = useState(0)
   const [usage, setUsage] = useState<Usage | null>(null)
   const alive = useRef(true)
+  const generating = useRef(false)
+  const reducedMotion = useReducedMotion()
   const controller = useRef<AbortController | null>(null)
   const resultHeading = useRef<HTMLHeadingElement>(null)
   const path = `/api/recommendations${query ? `?${query}` : ''}`
@@ -59,13 +62,15 @@ function CompanyRecommendations({ businessId, query }: { businessId: string; que
     setParams(next)
   }
   async function generate() {
+    if (generating.current || !data?.ai_available || !data.candidate_count) return
+    generating.current = true
     setBusy(true); setError('')
     controller.current = new AbortController()
     try {
-      const next = await recommendationRequest<Data>(path, { method: 'POST', signal: controller.current.signal })
+      const next = await recommendationRequest<Data>(`${path}${query ? '&' : '?'}refresh=true`, { method: 'POST', signal: controller.current.signal })
       if (alive.current) { setData(next); requestAnimationFrame(() => resultHeading.current?.focus({ preventScroll: true })) }
     } catch (e) { if (alive.current) setError((e as Error).message) }
-    finally { if (alive.current) setBusy(false) }
+    finally { generating.current = false; if (alive.current) setBusy(false) }
   }
   const hasFilters = ['topic', 'severity'].some(k => params.has(k))
   const actions = data?.result?.status === 'ready' ? data.result.recommendations : []
@@ -76,16 +81,19 @@ function CompanyRecommendations({ businessId, query }: { businessId: string; que
     {error && <div className="notice" role="alert">{error}{!data && <button onClick={() => { setError(''); setRetry(n => n + 1) }}>Повторить</button>}</div>}
     {!data && !error && <p className="recommendation-status" role="status">Подбираем новости для компании…</p>}
     {data && <>
+      <RecommendationMascot busy={busy} disabled={busy || !data.ai_available || data.candidate_count === 0} hasActions={actions.length > 0} onRefresh={generate} />
       {!data.ai_available && <p className="recommendation-status">Модель пока не подключена.</p>}
       {busy && <p className="recommendation-status" role="status">Готовим три действия. Обычно это занимает до минуты.</p>}
       <h2 ref={resultHeading} tabIndex={-1} className="bank-sr-only">Рекомендации для компании</h2>
-      {data.candidate_count === 0 || data.result?.status === 'insufficient_evidence' ? <div className="recommendation-empty"><h2>Пока мало подходящих новостей</h2><p>Попробуйте другие фильтры или добавьте источники.</p></div> : actions.length ? <div className="recommendation-list">{actions.map(item => <article className="recommendation-card" key={item.service.id}>
+      {data.candidate_count === 0 || data.result?.status === 'insufficient_evidence' ? <div className="recommendation-empty"><h2>Пока мало подходящих новостей</h2><p>Попробуйте другие фильтры или добавьте источники.</p></div> : actions.length ? <div className="recommendation-list">{actions.map((item, index) => <motion.article className="recommendation-card recommendation-message" key={`${data.result?.generated_at}:${item.service.id}`}
+        initial={{ opacity: 0, y: reducedMotion ? 0 : 16 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ y: { type: 'spring', duration: 0.45, bounce: 0.2, delay: index * 0.1 }, opacity: { duration: 0.18, delay: reducedMotion ? 0 : index * 0.1 } }}>
         <h2>{item.title}</h2><p className="recommendation-next-step">{item.action}</p>
         <div className="recommendation-card-bottom"><a className="recommendation-service-link" href={item.service.url} target="_blank" rel="noreferrer">{item.service.name}<HugeiconsIcon icon={ArrowUpRight01Icon} size={14} aria-hidden="true" /></a><div className="recommendation-source-links">{[...new Map(item.sources.map(s => [s.source_id,s])).values()].map(source => <a key={source.source_id} href={source.url} target="_blank" rel="noreferrer" title={source.title || source.source_name}><SourceLogo id={source.source_id} type={source.source_type} url={source.url} size={14} /><span>{source.source_name}</span></a>)}</div></div>
         <details className="recommendation-explanation"><summary>Почему это важно</summary><p>{item.rationale}</p><p>{item.relevance}</p><ul>{item.sources.map(source => <li key={source.id}><a href={source.url} target="_blank" rel="noreferrer">{source.title || source.source_name}</a></li>)}</ul></details>
-      </article>)}</div> : !busy && <div className="recommendation-empty"><h2>Что полезно вашему бизнесу?</h2><p>Подберём три действия по новостям из сохранённых источников.</p></div>}
+      </motion.article>)}</div> : !busy && <div className="recommendation-empty"><h2>Что полезно вашему бизнесу?</h2><p>Подберём три действия по новостям из сохранённых источников.</p></div>}
       <NewsStrip stories={stories} supporting={actions.length > 0} />
-      <div className="recommendation-footer"><details><summary>О подборе</summary><p>Учитываем отрасль компании, {data.counterparties.known_companies} известных контрагентов и выбранные при настройке источники. Для {data.counterparties.unknown_companies} контрагентов отрасль неизвестна. До 30 материалов за 30 дней. Демо на синтетических профилях; банковские операции не выполняются.</p>{data.result?.generated_at && <p>Обновлено {new Date(data.result.generated_at).toLocaleString('ru-RU')}. Результат сохраняется на час при неизменных данных.</p>}</details>{usage && <details><summary>Расход AI · {usage.total_tokens.toLocaleString('ru-RU')} токенов</summary><p>По всему сервису: вход {usage.input_tokens.toLocaleString('ru-RU')} · выход {usage.output_tokens.toLocaleString('ru-RU')} · запросов {usage.requests.toLocaleString('ru-RU')}{usage.estimated_usd !== null && ` · оценка $${usage.estimated_usd.toFixed(4)}–$${usage.estimated_peak_usd?.toFixed(4)}`}. Включает разметку и рекомендации. Запросы без известного тарифа не включены в стоимость.</p></details>}</div>
+      <div className="recommendation-footer"><details><summary>О подборе</summary><p>Учитываем отрасль компании, {data.counterparties.known_companies} известных контрагентов и выбранные при настройке источники. Для {data.counterparties.unknown_companies} контрагентов отрасль неизвестна. До 30 материалов за 30 дней. Демо на синтетических профилях; банковские операции не выполняются.</p>{data.result?.generated_at && <p>Обновлено {new Date(data.result.generated_at).toLocaleString('ru-RU')}. Результат сохраняется на час. Обновление запускает новый подбор.</p>}</details>{usage && <details><summary>Расход AI · {usage.total_tokens.toLocaleString('ru-RU')} токенов</summary><p>По всему сервису: вход {usage.input_tokens.toLocaleString('ru-RU')} · выход {usage.output_tokens.toLocaleString('ru-RU')} · запросов {usage.requests.toLocaleString('ru-RU')}{usage.estimated_usd !== null && ` · оценка $${usage.estimated_usd.toFixed(4)}–$${usage.estimated_peak_usd?.toFixed(4)}`}. Включает разметку и рекомендации. Запросы без известного тарифа не включены в стоимость.</p></details>}</div>
     </>}
   </section>
 }

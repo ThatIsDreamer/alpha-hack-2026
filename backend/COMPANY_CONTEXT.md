@@ -28,9 +28,12 @@ context is shared per company; there is no user authentication or access control
 
 ## UI
 
-The first step shows known facts and four optional clarification questions. Users
+The welcome mascot introduces the newsroom, with an option to go straight to
+company setup. The next step shows known facts and four optional clarification questions. Users
 can confirm known facts with all answer fields empty. The second step retains the
-existing source picker. Companies with saved sources but no confirmed context see
+existing source picker with the mascot. The sequence is welcome → context → sources.
+Once context is confirmed, reloading an unfinished setup resumes at sources.
+Companies with saved sources but no confirmed context see
 the new context step once; source preferences remain intact. «Контекст компании»
 in the newsroom opens the inline editor, with save/cancel and failure states.
 Switching companies unmounts forms and cancels old reads. Nothing is persisted
@@ -48,6 +51,9 @@ The cache key includes the full context, revision, provenance, dataset fingerpri
 and prompt version. Editing the context invalidates reuse automatically. Each new
 generated result records `context_version` and `context_snapshot`, so subsequent
 edits do not rewrite its provenance. Existing source/service validation remains.
+The refreshed recommendation flow and shake gesture use `refresh=true` to bypass
+the cached result; they still use the current company context and retain the
+generation lock and per-company cooldown.
 
 Local verification uses fake model responses; it does not spend production AI
 credits or change the production databases. Deploying or pushing is a separate step.

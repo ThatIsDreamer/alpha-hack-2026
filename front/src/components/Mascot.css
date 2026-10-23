@@ -1,0 +1,9 @@
+.mascot{display:inline-block;position:relative;width:var(--mascot-size,202px);max-width:100%;aspect-ratio:202/200;vertical-align:middle;isolation:isolate;flex-shrink:0}
+.mascot-star{display:block;width:100%;height:100%;object-fit:contain;user-select:none;pointer-events:none;transform-origin:50% 50%;animation:mascot-turn var(--mascot-back-duration,48s) linear infinite}
+.mascot-star-back{position:absolute;inset:0}
+.mascot-front-frame{position:absolute;width:var(--mascot-front-scale,78%);height:var(--mascot-front-scale,78%);left:50%;top:50%;transform:translate(-50%,-50%)}
+.mascot-star-front{animation-duration:var(--mascot-front-duration,36s);animation-direction:reverse}
+.mascot-face{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.mascot[data-animated="false"] .mascot-star{animation-play-state:paused}
+@keyframes mascot-turn{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.mascot-star{animation:none}}

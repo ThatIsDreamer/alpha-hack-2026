@@ -73,10 +73,13 @@ def test_context_passed_to_model_snapshot_and_cache_invalidation(dataset, monkey
         assert first['context_snapshot']['answers']['priorities'] == 'Закупка оборудования'
         assert client.post('/api/recommendations', headers=HEADERS).json()['result'] == first
         assert len(calls) == 1
+        refreshed = client.post('/api/recommendations?refresh=true', headers=HEADERS).json()['result']
+        assert len(calls) == 2 and refreshed['context_version'] == 1
+        assert refreshed['context_snapshot'] == first['context_snapshot']
         client.post(url, json=answers(version=1, priorities='Экспорт продукции'))
         assert client.get('/api/recommendations', headers=HEADERS).json()['result'] is None
         second = client.post('/api/recommendations', headers=HEADERS).json()['result']
-        assert second['context_version'] == 2 and len(calls) == 2
+        assert second['context_version'] == 2 and len(calls) == 3
         assert first['context_snapshot']['answers']['priorities'] == 'Закупка оборудования'
         db = api.database()
         snapshots = [json.loads(row[0])['context_version'] for row in db.conn.execute('SELECT result FROM recommendation_cache')]

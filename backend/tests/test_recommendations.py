@@ -90,6 +90,8 @@ def test_validated_sources_cache_and_preference_invalidation(dataset, monkeypatc
         assert 'text' not in action['sources'][0]
         assert client.post('/api/recommendations', headers=HEADERS).json()['result'] == first['result']
         assert len(calls) == 1
+        assert client.post('/api/recommendations?refresh=true', headers=HEADERS).status_code == 200
+        assert len(calls) == 2
         client.post('/api/businesses/U_26030/onboarding', json={'source_ids':['kommersant']})
         assert client.get('/api/recommendations', headers=HEADERS).json()['result'] is None
         onboard(client, 'U_3')
@@ -122,6 +124,7 @@ def test_model_usage_recorded_even_for_invalid_result(dataset, monkeypatch):
         seed_news()
         assert client.post('/api/recommendations', headers=HEADERS).status_code == 502
         assert client.post('/api/recommendations', headers=HEADERS).status_code == 429
+        assert client.post('/api/recommendations?refresh=true', headers=HEADERS).status_code == 429
         db = api.database()
         assert db.usage()['total_tokens'] == 150
         row = db.conn.execute("SELECT * FROM ai_usage WHERE purpose='recommendation'").fetchone()

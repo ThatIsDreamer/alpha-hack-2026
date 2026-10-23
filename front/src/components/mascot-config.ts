@@ -1,0 +1,31 @@
+export const DEFAULT_MASCOT_EXPRESSION = 'curious-right' as const
+
+export const DEFAULT_MASCOT_CONFIG = {
+  expressionBlend: 0.45,
+  expressionBounce: 0.3,
+  eyeWidth: 25,
+  eyeHeight: 46,
+  shortEyeHeight: 28,
+  eyeGap: 14,
+  eyeRadius: 7,
+  attentionTilt: 11,
+  happyEyeWidth: 35,
+  happyCurve: 15,
+  happyStroke: 11,
+  faceScale: 1,
+  faceX: 0,
+  faceY: 0,
+  gazeDistance: 11,
+  gazeDuration: 0.38,
+  gazeHold: 0.18,
+  gazeCenterHold: 1.2,
+  gazeBounce: 0.22,
+  centerEyeWidth: 26,
+  centerEyeHeight: 26,
+  backDuration: 34,
+  frontDuration: 35,
+  frontScale: 0.81,
+  spinEnabled: true,
+  gazeEnabled: true,
+}
+export type MascotConfig = typeof DEFAULT_MASCOT_CONFIG

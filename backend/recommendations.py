@@ -271,12 +271,12 @@ def preview(source: str | None = Query(None, max_length=100), topic: str | None 
 
 @router.post('')
 def recommend(source: str | None = Query(None, max_length=100), topic: str | None = None,
-              severity: str | None = None, profile=Depends(businesses.recommendation_business)):
+              severity: str | None = None, refresh: bool = False, profile=Depends(businesses.recommendation_business)):
     if not GATE.acquire(blocking=False):
         raise HTTPException(429, 'Рекомендации уже формируются. Повторите через минуту.')
     try:
         key, payload, public = context(profile, source, topic, severity)
-        if public['result']:
+        if public['result'] and not refresh:
             return public
         if not payload['news']:
             public['result'] = {'status': 'insufficient_evidence', 'recommendations': []}
