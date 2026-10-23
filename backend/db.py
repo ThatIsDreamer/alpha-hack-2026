@@ -36,6 +36,16 @@ class Database:
         CREATE INDEX IF NOT EXISTS news_status ON news(status, attempts);
         ''')
 
+        columns = {r['name'] for r in self.conn.execute('PRAGMA table_info(ai_usage)')}
+        with self.conn:
+            if 'purpose' not in columns:
+                self.conn.execute("ALTER TABLE ai_usage ADD COLUMN purpose TEXT NOT NULL DEFAULT 'classification'")
+                self.conn.execute('ALTER TABLE ai_usage ADD COLUMN business_id TEXT')
+            self.conn.execute("""CREATE TABLE IF NOT EXISTS recommendation_cache (
+                cache_key TEXT PRIMARY KEY, business_id TEXT NOT NULL, result TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)""")
+            self.conn.execute('CREATE INDEX IF NOT EXISTS usage_business ON ai_usage(business_id,created_at)')
+
     def insert(self, source_id, item):
         with self.conn:
             cursor = self.conn.execute('''INSERT OR IGNORE INTO news
@@ -64,14 +74,14 @@ class Database:
                 status='classified', classified_at=CURRENT_TIMESTAMP, last_error=NULL WHERE id=?""",
                 (labels['topic'], labels['severity'], model, version, row_id))
 
-    def record_usage(self, news_id, run_id, model, usage, failed):
+    def record_usage(self, news_id, run_id, model, usage, failed, purpose="classification", business_id=None):
         usage = usage or {}
         with self.conn:
             self.conn.execute("""INSERT INTO ai_usage
-                (news_id,run_id,model,prompt_tokens,completion_tokens,total_tokens,failed)
-                VALUES (?,?,?,?,?,?,?)""", (news_id, run_id, model,
+                (news_id,run_id,model,prompt_tokens,completion_tokens,total_tokens,failed,purpose,business_id)
+                VALUES (?,?,?,?,?,?,?,?,?)""", (news_id, run_id, model,
                 usage.get('prompt_tokens'), usage.get('completion_tokens'),
-                usage.get('total_tokens'), int(failed)))
+                usage.get('total_tokens'), int(failed), purpose, business_id))
 
     def usage(self, run_id=None):
         where, args = ('WHERE run_id=?', (run_id,)) if run_id is not None else ('', ())

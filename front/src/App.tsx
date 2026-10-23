@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Link, NavLink, Route, Routes, useParams, useSearchParams, useNavigate, useLocation } from 'react-router'
+import { BrowserRouter, Link, Route, Routes, useParams, useSearchParams, useNavigate, useLocation } from 'react-router'
 import './App.css'
 import BankMock from './BankMock'
+import Recommendations from './Recommendations'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowUpRight01Icon, ArrowLeft01Icon, ArrowRight01Icon, PlayIcon, News01Icon, Clock01Icon } from '@hugeicons/core-free-icons'
+import { ArrowUpRight01Icon, ArrowLeft01Icon, ArrowRight01Icon, PlayIcon } from '@hugeicons/core-free-icons'
 import { Button } from './components/ui/button'
 import './Newsroom.css'
 import { apiRequest } from './lib/api'
@@ -86,7 +87,7 @@ function Inbox() {
 function Article() {
   const { id } = useParams()
   const { data, error } = useData<News>(`/api/news/${id}`)
-  return <><Link className="back" to="/news"><HugeiconsIcon icon={ArrowLeft01Icon} size={17} aria-hidden="true" />К публикациям</Link>{error ? <Notice text={error} /> : !data ? <Notice text="Загружаем материал…" /> : <article className="article-detail"><div className="story-meta"><Source item={data} /><span>{data.published_at ? date(data.published_at) : 'Дата не указана'}</span></div><h1>{data.title || 'Публикация в Telegram'}</h1><div className="labels"><span>{labels[data.topic || ''] || 'Тема не определена'}</span><span>{data.severity ? `Риск: ${labels[data.severity] || data.severity}` : 'Оценка не готова'}</span><a href={data.url} target="_blank" rel="noreferrer">Первоисточник <HugeiconsIcon icon={ArrowUpRight01Icon} size={15} aria-hidden="true" /></a></div><div className="article-body">{data.text || 'Текст материала ещё не загружен.'}</div><p className="footnote">Оценка отражает репутационный риск для главного героя по содержанию статьи, а не подтверждённость обвинений.</p></article>}</>
+  return <><Link className="back" to="/debug/news"><HugeiconsIcon icon={ArrowLeft01Icon} size={17} aria-hidden="true" />К публикациям</Link>{error ? <Notice text={error} /> : !data ? <Notice text="Загружаем материал…" /> : <article className="article-detail"><div className="story-meta"><Source item={data} /><span>{data.published_at ? date(data.published_at) : 'Дата не указана'}</span></div><h1>{data.title || 'Публикация в Telegram'}</h1><div className="labels"><span>{labels[data.topic || ''] || 'Тема не определена'}</span><span>{data.severity ? `Риск: ${labels[data.severity] || data.severity}` : 'Оценка не готова'}</span><a href={data.url} target="_blank" rel="noreferrer">Первоисточник <HugeiconsIcon icon={ArrowUpRight01Icon} size={15} aria-hidden="true" /></a></div><div className="article-body">{data.text || 'Текст материала ещё не загружен.'}</div><p className="footnote">Оценка отражает репутационный риск для главного героя по содержанию статьи, а не подтверждённость обвинений.</p></article>}</>
 }
 function LabelingProgress({ run }: { run: Run }) {
   const progress = run.progress
@@ -121,6 +122,6 @@ function RouteFocus() {
   }, [pathname])
   return null
 }
-function NewsLayout() { return <BankMock><div className="newsroom"><nav className="newsroom-tabs" aria-label="Разделы Ньюсрума"><NavLink to="/news" end><HugeiconsIcon icon={News01Icon} size={18} aria-hidden="true" />Публикации</NavLink><NavLink to="/runs"><HugeiconsIcon icon={Clock01Icon} size={18} aria-hidden="true" />История запусков</NavLink></nav><Routes><Route path="/news" element={<Inbox />} /><Route path="/news/:id" element={<Article />} /><Route path="/runs" element={<Runs />} /><Route path="*" element={<><h1>Страница не найдена</h1><Link to="/news">Вернуться к публикациям</Link></>} /></Routes></div></BankMock> }
+function NewsLayout() { return <BankMock><div className="newsroom"><Routes><Route path="/news" element={<Recommendations />} /><Route path="/debug/news" element={<Inbox />} /><Route path="/news/:id" element={<Article />} /><Route path="/runs" element={<Runs />} /><Route path="/debug/runs" element={<Runs />} /><Route path="*" element={<><h1>Страница не найдена</h1><Link to="/news">Вернуться в Ньюсрум</Link></>} /></Routes></div></BankMock> }
 function App() { return <BrowserRouter><RouteFocus /><Routes><Route path="/" element={<BankMock />} /><Route path="*" element={<NewsLayout />} /></Routes></BrowserRouter> }
 export default App

@@ -181,7 +181,23 @@ For a selected company with incomplete onboarding, replace the main route's
 content with a source-selection workspace. Keep the shared Alfa header and
 sidebar; never use a popup or a dismiss/skip action for first-time onboarding.
 Use a 30px heading, the company ID, a native checkbox grid (3/2/1 columns),
-Hugeicons source icons, and the shared red primary action. A successful save
+Telegram/publisher source marks, and the shared red primary action. A successful save
 reveals the requested route. Completed companies can edit preferences inline
 through the company selector and cancel an edit. Loading/errors stay inside
 the workspace; only successful persistence marks onboarding complete.
+
+### Recommendation workspace
+
+`/news` shows company-scoped recommendations in the shared Alfa shell. Saved
+onboarding sources are automatic; the source-count control opens existing source
+settings. Topic/risk filters are collapsed under «Фильтры». Three compact white
+cards align left in a 760px column: 12px corners, 22px/24px padding (18px mobile),
+17px titles, one short action, service link and labelled source marks. Rationale
+and individual news links are under «Почему это важно». Keep only one red action.
+Below, supporting news form a horizontal strip of 270px cards (240px mobile),
+native scroll and arrow controls, no autoplay. Arrow scrolling is smooth normally
+and immediate for reduced motion. Before generation, show at most 10 eligible
+news previews. Global usage and context are collapsed in the footer. The raw feed
+and run history remain directly accessible for debugging with no navigation links.
+Keep no-company, loading, unavailable-model, insufficient-evidence and retry states.
+Source marks are local Telegram SVG/publisher favicons with contained 14–20px sizing.

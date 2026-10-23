@@ -8,7 +8,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   return data
 }
 
-/** Use for every future recommendation call. No recommendation route exists yet.
+/** Use for every company-scoped recommendation call.
  * Resolve selection at call time so a company switch cannot send a stale ID.
  */
 export function recommendationRequest<T>(path: string, options: RequestInit = {}): Promise<T> {

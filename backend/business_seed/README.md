@@ -39,11 +39,11 @@ payment pairs, 12,514 person-company links. The difference from the guide's
 
 Selection is stored only in browser localStorage under `alfa.selected-business-id`.
 There is no API endpoint/session state for setting a selected company.
-Future recommendation calls must use `recommendationRequest` in
+Recommendation calls use `recommendationRequest` in
 `front/src/lib/api.ts`, which reads the current selection for each request and
-sends `X-Business-ID`. Attach `Depends(recommendation_business)` to those future
+sends `X-Business-ID`. The recommendation API uses `Depends(recommendation_business)` on its
 FastAPI handlers to validate the ID and load its profile/group context. CORS
-allows this header. No recommendation endpoint or ranking behavior is implemented.
+allows this header. GET/POST `/api/recommendations` are implemented; see `backend/RECOMMENDATIONS.md`.
 This context is a demo preference, not an authentication or authorization mechanism.
 
 ## Company onboarding
@@ -59,8 +59,8 @@ This context is a demo preference, not an authentication or authorization mechan
 - `business_onboarding` lives in the same persistent business DB. Startup creates
   the table for existing databases without rebuilding the dataset; seed updates
   copy these mutable settings before the atomic file replacement.
-- Preferences are stored only. Ingestion, news listing and recommendations do not
-  use them yet. Disabled sources are labelled in the UI and can be stored as future
+- Recommendations use enabled saved sources as a mandatory filter. Ingestion and
+  the debug news listing remain global. Disabled sources are labelled in the UI and can be stored as future
   preferences; this does not enable collection from them.
 
 The selected company remains local. For an incomplete company, the frontend

@@ -13,6 +13,8 @@ from decimal import Decimal
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .business_topics import migrate_categories, news_topics, VERSION as CATEGORY_VERSION
+
 from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel, Field, StrictStr
 
@@ -43,6 +45,7 @@ def connection(write=False):
 
 
 def migrate_onboarding(conn):
+    migrate_categories(conn)
     conn.execute("""CREATE TABLE IF NOT EXISTS business_onboarding (
         business_id TEXT PRIMARY KEY, source_ids TEXT NOT NULL,
         completed_at TEXT NOT NULL, updated_at TEXT NOT NULL)""")
@@ -162,6 +165,7 @@ def import_dataset(target, seed=SEED):
 def summary(row):
     return {'id': row['id'], 'display_name': row['id'], 'group_id': row['group_id'],
             'industry_code': row['industry_code'], 'industry': row['industry'],
+            'news_topics': news_topics(row['industry_code']), 'category_mapping_version': CATEGORY_VERSION,
             'city': row['city'], 'region': row['region'],
             'revenue_rub': row['revenue_kopecks'] / 100 if row['revenue_kopecks'] is not None else None,
             'is_demo': row['demo_rank'] < 100}

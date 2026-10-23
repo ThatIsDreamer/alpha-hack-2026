@@ -67,7 +67,7 @@ def test_clean_import_and_profiles(dataset):
         group = client.get('/api/business-groups/g1?limit=1').json()
         assert group['total'] == 2 and len(group['items']) == 1
         assert client.get('/api/business-groups/missing').status_code == 404
-        assert client.get('/api/recommendations').status_code == 404
+        assert client.get('/api/recommendations').status_code == 422  # Company header required
     before = businesses.db_path().stat().st_mtime_ns
     businesses.import_dataset(businesses.db_path())
     assert businesses.db_path().stat().st_mtime_ns == before

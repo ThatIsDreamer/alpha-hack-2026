@@ -1,0 +1,46 @@
+.recommendations{max-width:1160px}
+.recommendation-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:20px}
+.recommendation-heading h1{font-size:28px!important}
+.recommendation-heading p{font-size:13px;color:#62666c;line-height:1.5;margin-top:10px;max-width:650px}
+.recommendation-heading>button{flex-shrink:0;background:#ef3124;color:white;border:0;height:38px;padding:0 15px;font-size:12px}
+.recommendation-tools{display:flex;align-items:flex-start;gap:24px;margin-bottom:24px;font-size:12px;color:#62666c}
+.recommendation-tools>button{border:0;background:none;padding:0;font:inherit;color:inherit;line-height:1.5;text-decoration:underline;text-underline-offset:4px}
+.recommendation-filters summary{cursor:pointer;line-height:1.5}
+.recommendation-filters .news-filters{margin:16px 0 0;padding:0}
+.recommendation-list{display:flex;flex-direction:column;gap:12px;max-width:760px}
+.recommendation-card{background:white;border-radius:12px;padding:22px 24px}
+.recommendation-card h2{font-size:17px;font-weight:600;line-height:1.4;letter-spacing:-.2px;margin-bottom:7px;text-wrap:balance}
+.recommendation-next-step{font-size:13px;line-height:1.6;color:#62666c;max-width:650px;margin:0}
+.recommendation-card-bottom{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-top:16px}
+.recommendation-service-link{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:#222;text-decoration:none}
+.recommendation-service-link:hover{text-decoration:underline;text-underline-offset:3px}
+.recommendation-source-links{display:flex;flex-wrap:wrap;gap:10px}
+.recommendation-source-links a{display:inline-flex;align-items:center;gap:5px;color:#62666c;font-size:11px;text-decoration:none}
+.recommendation-source-links a:hover{text-decoration:underline}
+.recommendation-explanation{font-size:12px;color:#62666c;margin-top:14px;line-height:1.6}
+.recommendation-explanation summary{cursor:pointer;width:fit-content}
+.recommendation-explanation p{margin-top:12px;max-width:650px}
+.recommendation-explanation ul{padding-left:18px;margin-top:12px}
+.recommendation-explanation a{text-underline-offset:3px}
+.recommendation-empty{padding:32px 0;max-width:650px}
+.recommendation-empty h2{font-size:18px}
+.recommendation-empty p,.recommendation-status{font-size:13px;line-height:1.6;color:#62666c;margin-top:10px}
+.recommendation-status{margin-bottom:20px}
+.recommendation-news{margin-top:36px;min-width:0}
+.recommendation-news-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.recommendation-news-heading h2{font-size:14px;font-weight:600;letter-spacing:0}
+.recommendation-news-heading>div{display:flex;gap:8px}
+.recommendation-news-heading button{display:flex;align-items:center;justify-content:center;border:0;background:white;border-radius:7px;width:30px;height:30px;padding:0}
+.recommendation-news-strip{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#c9cbd0 transparent;padding-bottom:10px}
+.recommendation-news-strip>a{flex:0 0 270px;scroll-snap-align:start;background:white;border-radius:12px;padding:18px;text-decoration:none;color:inherit}
+.news-strip-source{display:flex;align-items:center;gap:7px;font-size:11px;color:#62666c;margin-bottom:10px}
+.recommendation-news-strip strong{font-size:13px;font-weight:500;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.recommendation-news-strip>a:hover strong{text-decoration:underline;text-underline-offset:3px}
+.recommendation-footer{display:flex;flex-wrap:wrap;gap:12px 24px;margin-top:20px;font-size:11px;color:#62666c;line-height:1.6}
+.recommendation-footer summary{cursor:pointer;width:fit-content}
+.recommendation-footer p{max-width:660px;margin-top:8px}
+.recommendations .notice button{margin-left:12px}
+@media(max-width:760px){.recommendation-heading{gap:16px;flex-wrap:wrap}.recommendation-heading h1{font-size:26px!important}.recommendation-heading p{font-size:12px}.recommendation-card{padding:18px}.recommendation-card h2{font-size:16px}.recommendation-tools{gap:20px}.recommendation-filters .news-filters{display:flex;flex-direction:column;gap:12px}.recommendation-news-strip>a{flex-basis:240px}.recommendation-news{margin-top:28px}}
+.recommendation-heading>div{min-width:0}
+.recommendation-heading p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recommendation-heading>div{max-width:100%}
