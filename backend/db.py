@@ -104,7 +104,7 @@ class Database:
         row = self.conn.execute('SELECT phase FROM run_progress WHERE run_id=?', (run_id,)).fetchone()
         if not row:
             return None
-        items = [dict(r) for r in self.conn.execute("""SELECT i.news_id,i.state,i.topic,i.severity,n.title,n.source_id
+        items = [dict(r) for r in self.conn.execute("""SELECT i.news_id,i.state,i.topic,i.severity,coalesce(nullif(trim(n.title),''),substr(n.text,1,140)) AS title,n.source_id
             FROM run_items i JOIN news n ON n.id=i.news_id WHERE i.run_id=? ORDER BY i.news_id""", (run_id,))]
         counts = {state: sum(i['state'] == state for i in items)
                   for state in ('queued', 'running', 'completed', 'failed', 'interrupted')}
