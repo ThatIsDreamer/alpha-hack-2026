@@ -13,7 +13,7 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from .db import Database
 from .main import ROOT, run
-from .classifier import create_classifier
+from .classifier import create_classifier, TOPICS, SEVERITIES
 
 
 def database():
@@ -147,10 +147,18 @@ def source_info(source_id):
 
 
 @app.get('/api/news')
-def news(source: str | None = None, limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
+def news(source: str | None = None, topic: str | None = None, severity: str | None = None, limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0)):
     db = database()
     try:
-        where, args = ("WHERE status='classified' AND source_id=?", [source]) if source else ("WHERE status='classified'", [])
+        if topic is not None and topic not in TOPICS:
+            raise HTTPException(422, 'Неизвестная тема')
+        if severity is not None and severity not in SEVERITIES:
+            raise HTTPException(422, 'Неизвестный уровень риска')
+        where, args = "WHERE status='classified'", []
+        for column, value in (('source_id', source), ('topic', topic), ('severity', severity)):
+            if value:
+                where += f' AND {column}=?'
+                args.append(value)
         total = db.conn.execute(f'SELECT count(*) FROM news {where}', args).fetchone()[0]
         rows = db.conn.execute(f'''SELECT id,source_id,title,url,published_at,discovered_at,status,topic,severity,
             substr(text,1,240) AS excerpt FROM news {where} ORDER BY classified_at DESC, id DESC LIMIT ? OFFSET ?''', args+[limit,offset]).fetchall()

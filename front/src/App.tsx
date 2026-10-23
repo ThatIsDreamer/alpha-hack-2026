@@ -55,16 +55,29 @@ function RunButton() {
 function Inbox() {
   const [params, setParams] = useSearchParams()
   const source = params.get('source') || ''
+  const topic = params.get('topic') || ''
+  const severity = params.get('severity') || ''
+  function updateFilter(key: string, value: string) {
+    const next = new URLSearchParams(params)
+    if (value) next.set(key, value); else next.delete(key)
+    next.delete('offset')
+    setParams(next)
+  }
+  function goToPage(value: number) {
+    const next = new URLSearchParams(params)
+    next.set('offset', String(value))
+    setParams(next)
+  }
   const offset = Math.max(0, Number(params.get('offset')) || 0)
   const { data: overview, error: overviewError } = useData<Overview>('/api/overview')
-  const { data, error } = useData<{ items: News[]; total: number }>(`/api/news?limit=20&offset=${offset}${source ? `&source=${encodeURIComponent(source)}` : ''}`)
+  const { data, error } = useData<{ items: News[]; total: number }>(`/api/news?limit=20&offset=${offset}${source ? `&source=${encodeURIComponent(source)}` : ''}${topic ? `&topic=${encodeURIComponent(topic)}` : ''}${severity ? `&severity=${encodeURIComponent(severity)}` : ''}`)
   return <><div className="page-heading"><div><h1>Новости в одном месте.</h1><p className="intro">Материалы из открытых источников. Новые публикации — каждый час.</p></div><RunButton /></div>
     {overviewError && <Notice text={overviewError} />}
     {overview && <><div className="metrics"><div><strong>{overview.total}</strong><span>Собрано материалов</span></div><div><strong>{overview.classified}</strong><span>Размечено</span></div><div><strong>{overview.pending}</strong><span>Ожидают разметки</span></div><div><strong className="time">{new Date(overview.next_run).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</strong><span>Следующий сбор · местное время</span></div></div>
     {!overview.classification_enabled && <Notice text="Сбор работает. Для определения темы и оценки репутационного риска нужен API-ключ модели." />}</>}
-    <div className="section-heading"><h2>Размеченные публикации <span>{data?.total ?? '…'}</span></h2><label>Источник <select value={source} onChange={e => setParams(e.target.value ? { source: e.target.value } : {})}><option value="">Все источники</option>{overview?.sources.filter(s => s.enabled).map(s => <option key={s.id} value={s.id}>{s.name || s.id} · {s.type === 'telegram' ? 'Telegram' : s.type === 'rss' ? 'RSS' : 'Сайт'}</option>)}</select></label></div>
-    {error ? <Notice text={error} /> : !data ? <Notice text="Загружаем публикации…" /> : data.items.length === 0 ? <Notice text="Размеченных публикаций пока нет. Дождитесь завершения AI-разметки или выберите другой источник." /> : <div className="news-list">{data.items.map((item, i) => <article className="news-row" key={item.id}><span className="row-number">{String(offset+i+1).padStart(2, '0')}</span><div><div className="story-meta"><Source item={item} /><span>{item.published_at ? date(item.published_at) : 'Дата не указана'}</span></div><h3><Link to={`/news/${item.id}`}>{item.title || 'Публикация в Telegram'}</Link></h3><p className="excerpt">{item.excerpt || 'Текст ещё не загружен.'}</p><div className="labels"><span>{labels[item.topic || ''] || 'Тема не определена'}</span><span>{item.severity ? `Риск: ${labels[item.severity] || item.severity}` : 'Оценка не готова'}</span></div></div><Link className="open-story" to={`/news/${item.id}`} aria-label={`Читать ${item.title || 'публикацию'}`}>↗</Link></article>)}</div>}
-    {data && <div className="pagination"><button disabled={offset === 0} onClick={() => setParams({ source, offset: String(Math.max(0,offset-20)) })}>← Назад</button><span>{data.total ? `${offset+1}–${Math.min(offset+20,data.total)} из ${data.total}` : 'Нет публикаций'}</span><button disabled={offset+20 >= data.total} onClick={() => setParams({ source, offset: String(offset+20) })}>Далее →</button></div>}
+    <div className="section-heading"><h2>Размеченные публикации <span>{data?.total ?? '…'}</span></h2></div><div className="news-filters"><label>Источник <select value={source} onChange={e => updateFilter('source', e.target.value)}><option value="">Все источники</option>{overview?.sources.filter(s => s.enabled).map(s => <option key={s.id} value={s.id}>{s.name || s.id} · {s.type === 'telegram' ? 'Telegram' : s.type === 'rss' ? 'RSS' : 'Сайт'}</option>)}</select></label><label>Тема <select value={topic} onChange={e => updateFilter('topic', e.target.value)}><option value="">Все темы</option>{['politics','economy','business','law','society','technology','science','health','environment','culture','sports','other'].map(value => <option key={value} value={value}>{labels[value]}</option>)}</select></label><label>Уровень риска <select value={severity} onChange={e => updateFilter('severity', e.target.value)}><option value="">Любой риск</option>{['none','low','moderate','high','unclear'].map(value => <option key={value} value={value}>{labels[value]}</option>)}</select></label>{(source || topic || severity) && <button onClick={() => setParams({})}>Сбросить фильтры</button>}</div>
+    {error ? <Notice text={error} /> : !data ? <Notice text="Загружаем публикации…" /> : data.items.length === 0 ? <Notice text="По выбранным фильтрам нет размеченных публикаций. Измените фильтры или дождитесь новых материалов." /> : <div className="news-list">{data.items.map((item, i) => <article className="news-row" key={item.id}><span className="row-number">{String(offset+i+1).padStart(2, '0')}</span><div><div className="story-meta"><Source item={item} /><span>{item.published_at ? date(item.published_at) : 'Дата не указана'}</span></div><h3><Link to={`/news/${item.id}`}>{item.title || 'Публикация в Telegram'}</Link></h3><p className="excerpt">{item.excerpt || 'Текст ещё не загружен.'}</p><div className="labels"><span>{labels[item.topic || ''] || 'Тема не определена'}</span><span>{item.severity ? `Риск: ${labels[item.severity] || item.severity}` : 'Оценка не готова'}</span></div></div><Link className="open-story" to={`/news/${item.id}`} aria-label={`Читать ${item.title || 'публикацию'}`}>↗</Link></article>)}</div>}
+    {data && <div className="pagination"><button disabled={offset === 0} onClick={() => goToPage(Math.max(0,offset-20))}>← Назад</button><span>{data.total ? `${offset+1}–${Math.min(offset+20,data.total)} из ${data.total}` : 'Нет публикаций'}</span><button disabled={offset+20 >= data.total} onClick={() => goToPage(offset+20)}>Далее →</button></div>}
     <p className="footnote">Пробный сбор: до 5 материалов из каждого источника; загрузка и AI-разметка до 5 текстов. Доступен раз в 5 минут.</p></>
 }
 function Article() {

@@ -113,3 +113,26 @@ def test_inbox_only_lists_classified_items_with_correct_pagination(tmp_path, mon
         assert [i['id'] for i in client.get('/api/news?limit=2&offset=2').json()['items']] == [2]
         filtered = client.get('/api/news?source=rbc').json()
         assert filtered['total'] == 1 and filtered['items'][0]['id'] == 2
+
+
+def test_topic_risk_and_source_filters_combine(tmp_path, monkeypatch):
+    monkeypatch.setenv('NEWS_DB', str(tmp_path / 'filters.sqlite3'))
+    monkeypatch.setenv('ENABLE_SCHEDULER', 'false')
+    with TestClient(api.app) as client:
+        db = api.database()
+        for i, (source, topic, severity) in enumerate([
+            ('lenta','business','high'), ('rbc','business','high'),
+            ('lenta','business','none'), ('lenta','politics','high'),
+            ('lenta','business','high')], 1):
+            db.insert(source, Item(str(i), f'https://test/{i}', str(i), 'Text'))
+            if i != 5:
+                db.classified(i, {'topic':topic, 'severity':severity}, 'test', '1')
+        db.conn.close()
+        assert client.get('/api/news?topic=business').json()['total'] == 3
+        assert client.get('/api/news?severity=high').json()['total'] == 3
+        both = client.get('/api/news?topic=business&severity=high&source=lenta').json()
+        assert both['total'] == 1 and both['items'][0]['id'] == 1
+        assert client.get('/api/news?topic=business&severity=high&limit=1&offset=1').json()['items'][0]['id'] == 1
+        assert client.get('/api/news?topic=sports&severity=high').json()['total'] == 0
+        assert client.get('/api/news?topic=invalid').status_code == 422
+        assert client.get('/api/news?severity=invalid').status_code == 422
