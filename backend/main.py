@@ -1,6 +1,6 @@
 """Run once per cron invocation: python -m backend.main."""
 import argparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 import fcntl
 import json
 import logging
@@ -25,6 +25,7 @@ def run(db, sources, client, classifier=None, limit=100, run_id=None):
         raise ValueError('AI_CONCURRENCY must be between 1 and 20')
     collectors = {s['id']: COLLECTORS[s['type']](s, client) for s in sources if s.get('enabled', True)}
     stats = dict(discovered=0, fetched=0, classified=0, errors=0)
+    db.phase(run_id, 'discovering')
     for source_id, collector in collectors.items():
         try:
             source = next(s for s in sources if s['id'] == source_id)
@@ -36,6 +37,7 @@ def run(db, sources, client, classifier=None, limit=100, run_id=None):
         except Exception:
             stats['errors'] += 1
             log.exception('Discovery failed: %s', source_id)
+    db.phase(run_id, 'fetching')
     for row in db.pending('pending_fetch', limit):
         if row['source_id'] not in collectors:
             continue
@@ -59,21 +61,42 @@ def run(db, sources, client, classifier=None, limit=100, run_id=None):
                 return None, None, error
 
         rows = db.pending('pending_classification', limit)
+        db.queue_items(run_id, rows)
+        db.phase(run_id, 'labeling')
         log.info('Classifying %s items with up to %s concurrent requests', len(rows), workers)
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            futures = {pool.submit(classify, row): row for row in rows}
-            for future in as_completed(futures):
-                row = futures[future]
-                labels, usage, error = future.result()
-                # SQLite stays on the owning thread; persist each response immediately.
-                db.record_usage(row['id'], run_id, classifier.model, usage, error is not None)
-                if error is None:
-                    db.classified(row['id'], labels, classifier.model, VERSION)
-                    stats['classified'] += 1
-                else:
-                    db.failed(row['id'], error)
-                    stats['errors'] += 1
-                    log.warning('Classification failed for item %s: %s', row['id'], type(error).__name__)
+            remaining = iter(rows)
+            futures = {}
+
+            def submit_next():
+                row = next(remaining, None)
+                if row is not None:
+                    db.item_progress(run_id, row['id'], 'running')
+                    futures[pool.submit(classify, row)] = row
+
+            for _ in range(min(workers, len(rows))):
+                submit_next()
+            while futures:
+                completed, _ = wait(futures, return_when=FIRST_COMPLETED)
+                for future in completed:
+                    row = futures.pop(future)
+                    try:
+                        labels, usage, error = future.result()
+                    except Exception as exception:
+                        labels, usage, error = None, None, exception
+                    # SQLite stays on the owning thread; persist each response immediately.
+                    db.record_usage(row['id'], run_id, classifier.model, usage, error is not None)
+                    if error is None:
+                        db.classified(row['id'], labels, classifier.model, VERSION)
+                        db.item_progress(run_id, row['id'], 'completed', labels)
+                        stats['classified'] += 1
+                    else:
+                        db.failed(row['id'], error)
+                        db.item_progress(run_id, row['id'], 'failed')
+                        stats['errors'] += 1
+                        log.warning('Classification failed for item %s: %s', row['id'], type(error).__name__)
+                    submit_next()
+    db.phase(run_id, 'finished' if classifier else 'disabled')
     return stats
 
 

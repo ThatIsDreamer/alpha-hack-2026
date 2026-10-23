@@ -167,3 +167,5 @@ Demo runs now classify up to 5 pending items when model credentials are configur
 the persisted five-minute cooldown and one-run-at-a-time lock still apply.
 
 AI marking runs concurrently (default 5 requests, `AI_CONCURRENCY=1..20`). SQLite writes remain serialized. Provider-reported input/output/total tokens are persisted per attempt and run, including invalid label responses. Unknown usage is flagged; historical usage and provider-internal retries cannot be reconstructed. Usage is visible on the run-history page; token counts are not a monetary bill.
+
+Run history polls every two seconds and exposes persisted discovery/fetch/labeling phases plus per-item queued, running, completed, failed, and interrupted states. Item labels are retained per run. Detailed progress starts with new runs after this feature is deployed; older runs retain their aggregate results.

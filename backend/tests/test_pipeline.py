@@ -132,3 +132,52 @@ def test_usage_retained_for_rejected_output():
     labels, usage, error = OpenAIClassifier(client).classify_with_usage('text')
     assert labels is None and isinstance(error, ValueError)
     assert usage['total_tokens'] == 84
+
+
+def test_live_progress_distinguishes_inflight_from_queue(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Event, Lock
+    from backend.collectors.base import Item
+    monkeypatch.setenv('AI_CONCURRENCY', '2')
+    path = tmp_path / 'progress.sqlite3'
+    db = Database(path)
+    for i in range(3):
+        item = Item(str(i), f'https://test/{i}', str(i), 'Text')
+        db.insert('test', item)
+        db.fetched(i + 1, item)
+    started, release, mutex = Event(), Event(), Lock()
+    class Classifier:
+        model = 'test'
+        calls = 0
+        def classify(self, text):
+            with mutex:
+                self.calls += 1
+                if self.calls == 2:
+                    started.set()
+            assert release.wait(5)
+            if text.startswith('1\n'):
+                raise ValueError('invalid labels')
+            return {'topic': 'business', 'severity': 'none'}
+    def execute():
+        worker_db = Database(path)
+        try:
+            with httpx.Client() as client:
+                return run(worker_db, [], client, Classifier(), run_id=42)
+        finally:
+            worker_db.conn.close()
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(execute)
+        try:
+            assert started.wait(5)
+            progress = db.progress(42)
+            assert progress['phase'] == 'labeling'
+            assert progress['counts']['running'] == 2
+            assert progress['counts']['queued'] == 1
+        finally:
+            release.set()
+        assert future.result(timeout=5)['classified'] == 2
+    progress = db.progress(42)
+    assert progress['phase'] == 'finished'
+    assert progress['counts'] == dict(queued=0, running=0, completed=2, failed=1, interrupted=0)
+    assert progress['items'][0]['topic'] == 'business'
+    assert progress['items'][1]['topic'] is None

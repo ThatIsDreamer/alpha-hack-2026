@@ -26,6 +26,8 @@ def initialize():
         db.conn.execute('''CREATE TABLE IF NOT EXISTS runs (
             id INTEGER PRIMARY KEY, kind TEXT NOT NULL, status TEXT NOT NULL,
             started_at REAL NOT NULL, finished_at REAL, result TEXT, error TEXT)''')
+        db.conn.execute("UPDATE run_items SET state='interrupted' WHERE state IN ('queued','running') AND run_id IN (SELECT id FROM runs WHERE status='running')")
+        db.conn.execute("UPDATE run_progress SET phase='interrupted' WHERE run_id IN (SELECT id FROM runs WHERE status='running')")
         db.conn.execute("UPDATE runs SET status='interrupted', finished_at=? WHERE status='running'", (time.time(),))
     db.conn.close()
 
@@ -45,6 +47,7 @@ def reserve(kind):
             raise HTTPException(429, 'Пробный сбор доступен раз в пять минут. Результат предыдущего запуска — в истории.')
         with db.conn:
             row = db.conn.execute("INSERT INTO runs(kind,status,started_at) VALUES (?,'running',?)", (kind, time.time()))
+        db.phase(row.lastrowid, 'discovering')
         return row.lastrowid, lock
     except Exception:
         lock.close()
@@ -68,7 +71,9 @@ def execute(run_id, lock, kind):
             db.conn.execute('UPDATE runs SET status=?, result=?, finished_at=? WHERE id=?',
                             ('partial' if result['errors'] else 'completed', json.dumps(result), time.time(), run_id))
     except Exception as error:
+        db.phase(run_id, 'failed')
         with db.conn:
+            db.conn.execute("UPDATE run_items SET state='interrupted' WHERE run_id=? AND state IN ('queued','running')", (run_id,))
             db.conn.execute("UPDATE runs SET status='failed',error=?,finished_at=? WHERE id=?",
                             (type(error).__name__, time.time(), run_id))
     finally:
@@ -176,6 +181,7 @@ def runs():
         items = [dict(r) for r in db.conn.execute('SELECT * FROM runs ORDER BY id DESC LIMIT 30')]
         for item in items:
             item['usage'] = db.usage(item['id'])
+            item['progress'] = db.progress(item['id'])
             item['result'] = json.loads(item['result']) if item['result'] else None
         return items
     finally:

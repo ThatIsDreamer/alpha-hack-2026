@@ -73,3 +73,22 @@ def test_usage_and_source_metadata_are_exposed(tmp_path, monkeypatch):
         item = client.get('/api/news').json()['items'][0]
         assert item['source_type'] == 'telegram' and item['source_channel'] == 'banksta'
         assert client.get('/api/news/1').json()['source_name'] == 'Банкста'
+
+
+def test_restart_clears_stale_progress(tmp_path, monkeypatch):
+    monkeypatch.setenv('NEWS_DB', str(tmp_path / 'restart.sqlite3'))
+    monkeypatch.setenv('ENABLE_SCHEDULER', 'false')
+    api.initialize()
+    run_id, lock = api.reserve('scheduled')
+    lock.close()
+    db = api.database()
+    db.insert('lenta', Item('1', 'https://test/1', 'Title', 'Text'))
+    db.queue_items(run_id, [{'id': 1}])
+    db.item_progress(run_id, 1, 'running')
+    db.conn.close()
+    with TestClient(api.app) as client:
+        run = client.get('/api/runs').json()[0]
+        assert run['status'] == 'interrupted'
+        assert run['progress']['phase'] == 'interrupted'
+        assert run['progress']['counts']['running'] == 0
+        assert run['progress']['items'][0]['state'] == 'interrupted'

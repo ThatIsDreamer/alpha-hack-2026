@@ -19,6 +19,13 @@ class Database:
             last_error TEXT, discovered_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             classified_at TEXT, UNIQUE(source_id, external_id), UNIQUE(url)
         );
+        CREATE TABLE IF NOT EXISTS run_progress (
+            run_id INTEGER PRIMARY KEY, phase TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS run_items (
+            run_id INTEGER NOT NULL, news_id INTEGER NOT NULL, state TEXT NOT NULL,
+            topic TEXT, severity TEXT, PRIMARY KEY(run_id, news_id)
+        );
         CREATE TABLE IF NOT EXISTS ai_usage (
             id INTEGER PRIMARY KEY, news_id INTEGER NOT NULL, run_id INTEGER,
             model TEXT NOT NULL, prompt_tokens INTEGER, completion_tokens INTEGER,
@@ -74,3 +81,31 @@ class Database:
             coalesce(sum(total_tokens),0) AS total_tokens,
             coalesce(sum(total_tokens IS NULL),0) AS unknown_requests,
             min(created_at) AS since FROM ai_usage {where}""", args).fetchone())
+
+    def phase(self, run_id, phase):
+        if run_id is not None:
+            with self.conn:
+                self.conn.execute('INSERT OR REPLACE INTO run_progress VALUES (?,?)', (run_id, phase))
+
+    def queue_items(self, run_id, rows):
+        if run_id is not None:
+            with self.conn:
+                self.conn.executemany("INSERT INTO run_items(run_id,news_id,state) VALUES (?,?,'queued')",
+                                      [(run_id, row['id']) for row in rows])
+
+    def item_progress(self, run_id, news_id, state, labels=None):
+        if run_id is not None:
+            labels = labels or {}
+            with self.conn:
+                self.conn.execute('UPDATE run_items SET state=?,topic=?,severity=? WHERE run_id=? AND news_id=?',
+                    (state, labels.get('topic'), labels.get('severity'), run_id, news_id))
+
+    def progress(self, run_id):
+        row = self.conn.execute('SELECT phase FROM run_progress WHERE run_id=?', (run_id,)).fetchone()
+        if not row:
+            return None
+        items = [dict(r) for r in self.conn.execute("""SELECT i.news_id,i.state,i.topic,i.severity,n.title,n.source_id
+            FROM run_items i JOIN news n ON n.id=i.news_id WHERE i.run_id=? ORDER BY i.news_id""", (run_id,))]
+        counts = {state: sum(i['state'] == state for i in items)
+                  for state in ('queued', 'running', 'completed', 'failed', 'interrupted')}
+        return {'phase': row['phase'], 'total': len(items), 'counts': counts, 'items': items}
