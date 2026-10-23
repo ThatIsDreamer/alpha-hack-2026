@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { TelegramIcon, RssIcon, Globe02Icon } from '@hugeicons/core-free-icons'
+import { SourceLogo } from './components/SourceLogo'
 import { Button } from './components/ui/button'
 import { apiRequest } from './lib/api'
 import { useSelectedBusinessId } from './lib/business-selection'
@@ -67,7 +66,7 @@ function CompanyWorkspace({ businessId, children }: { businessId: string; childr
     {loading && <p role="status" className="onboarding-status">Загружаем источники…</p>}
     {error && <div role="alert" className="onboarding-error"><p>{error}</p>{!data && <Button variant="secondary" onClick={() => { setLoading(true); setRetry(n => n + 1) }}>Повторить</Button>}</div>}
     {data && <><div className="onboarding-selection"><span aria-live="polite">Выбрано: {chosen.length}</span><button type="button" disabled={busy} onClick={() => setChosen(data.sources.filter(source => source.enabled).map(source => source.id))}>Выбрать доступные</button><button type="button" disabled={busy || !chosen.length} onClick={() => setChosen([])}>Снять все</button></div>
-    <fieldset className="onboarding-sources" disabled={busy}><legend className="bank-sr-only">Предпочитаемые источники новостей</legend>{data.sources.map(source => <label key={source.id} className={`onboarding-source ${chosen.includes(source.id) ? 'is-selected' : ''}`}><input type="checkbox" checked={chosen.includes(source.id)} onChange={() => toggle(source.id)} /><HugeiconsIcon icon={source.type === 'telegram' ? TelegramIcon : source.type === 'rss' ? RssIcon : Globe02Icon} size={18} strokeWidth={1.6} aria-hidden="true" /><span><strong>{source.name}</strong><small>{source.type === 'telegram' ? 'Telegram' : source.type === 'rss' ? 'RSS' : 'Сайт'}{!source.enabled && ' · сбор временно отключён'}</small></span></label>)}</fieldset></>}
+    <fieldset className="onboarding-sources" disabled={busy}><legend className="bank-sr-only">Предпочитаемые источники новостей</legend>{data.sources.map(source => <label key={source.id} className={`onboarding-source ${chosen.includes(source.id) ? 'is-selected' : ''}`}><input type="checkbox" checked={chosen.includes(source.id)} onChange={() => toggle(source.id)} /><SourceLogo id={source.id} type={source.type} /><span><strong>{source.name}</strong><small>{source.type === 'telegram' ? 'Telegram' : source.type === 'rss' ? 'RSS' : 'Сайт'}{!source.enabled && ' · сбор временно отключён'}</small></span></label>)}</fieldset></>}
     <div className="onboarding-footer"><p className="onboarding-note">Сохраним выбор для этой компании. Пока он не меняет ленту новостей.</p><div className="onboarding-actions">{data?.completed && <Button variant="secondary" onClick={() => { setChosen(data.source_ids); setEditing(false); setError('') }} disabled={busy}>Отмена</Button>}<Button onClick={save} disabled={busy || loading || !data || !chosen.length}>{busy ? 'Сохраняем…' : data?.completed ? 'Сохранить' : 'Сохранить и продолжить'}</Button></div></div>
   </section>
 }

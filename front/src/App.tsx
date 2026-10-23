@@ -3,10 +3,11 @@ import { BrowserRouter, Link, NavLink, Route, Routes, useParams, useSearchParams
 import './App.css'
 import BankMock from './BankMock'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowUpRight01Icon, ArrowLeft01Icon, ArrowRight01Icon, PlayIcon, TelegramIcon, RssIcon, Globe02Icon, News01Icon, Clock01Icon } from '@hugeicons/core-free-icons'
+import { ArrowUpRight01Icon, ArrowLeft01Icon, ArrowRight01Icon, PlayIcon, News01Icon, Clock01Icon } from '@hugeicons/core-free-icons'
 import { Button } from './components/ui/button'
 import './Newsroom.css'
 import { apiRequest } from './lib/api'
+import { SourceLogo } from './components/SourceLogo'
 
 const labels: Record<string,string> = { politics: 'Политика', economy: 'Экономика', business: 'Бизнес', law: 'Право', society: 'Общество', technology: 'Технологии', science: 'Наука', health: 'Здоровье', environment: 'Экология', culture: 'Культура', sports: 'Спорт', other: 'Другое', none: 'Нет', low: 'Низкий', moderate: 'Умеренный', high: 'Высокий', unclear: 'Неясно' }
 function request<T>(path: string, method = 'GET'): Promise<T> {
@@ -32,7 +33,7 @@ const number = (value: number) => value.toLocaleString('ru-RU')
 function Source({ item }: { item: News }) {
   const telegram = item.source_type === 'telegram'
   return <span className={`source-identity ${telegram ? 'telegram' : ''}`}>
-    <span className="source-kind"><HugeiconsIcon icon={telegram ? TelegramIcon : item.source_type === 'rss' ? RssIcon : Globe02Icon} size={15} strokeWidth={1.6} aria-hidden="true" />{telegram ? 'Telegram' : item.source_type === 'rss' ? 'RSS' : 'Сайт'}</span>
+    <span className="source-kind"><SourceLogo id={item.source_id} type={item.source_type} url={item.url} size={16} />{telegram ? 'Telegram' : item.source_type === 'rss' ? 'RSS' : 'Сайт'}</span>
     <span>{item.source_name || item.source_id}</span>{telegram && item.source_channel && item.source_name !== `@${item.source_channel}` && <span className="channel-name">@{item.source_channel}</span>}
   </span>
 }
