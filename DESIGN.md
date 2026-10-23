@@ -195,8 +195,10 @@ cards align left in a 760px column: 12px corners, 22px/24px padding (18px mobile
 17px titles, one short action, service link and labelled source marks. Rationale
 and individual news links are under «Почему это важно». Keep only one red action.
 Below, supporting news form a horizontal strip of 270px cards (240px mobile),
-native scroll and arrow controls, no autoplay. Arrow scrolling is smooth normally
-and immediate for reduced motion. Before generation, show at most 10 eligible
+native scroll and arrow controls. Auto-advance one card every five seconds,
+wrapping at the end; pause on hover, focus, hidden tab, or while offscreen. A small
+pause/play button controls autoplay. Reduced motion disables autoplay and makes
+manual arrow scrolling immediate. Before generation, show at most 10 eligible
 news previews. Global usage and context are collapsed in the footer. The raw feed
 and run history remain directly accessible for debugging with no navigation links.
 Keep no-company, loading, unavailable-model, insufficient-evidence and retry states.

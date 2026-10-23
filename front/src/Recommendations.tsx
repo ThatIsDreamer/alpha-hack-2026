@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { useReducedMotion } from 'motion/react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowUpRight01Icon, RefreshIcon, ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
+import { ArrowUpRight01Icon, RefreshIcon, PlayIcon, PauseIcon, ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { Button } from './components/ui/button'
 import { SourceLogo } from './components/SourceLogo'
 import { apiRequest, recommendationRequest } from './lib/api'
@@ -91,9 +92,26 @@ function CompanyRecommendations({ businessId, query }: { businessId: string; que
 
 function NewsStrip({ stories, supporting }: { stories: Source[]; supporting: boolean }) {
   const strip = useRef<HTMLDivElement>(null)
+  const [paused, setPaused] = useState(false)
+  const reducedMotion = useReducedMotion()
+  useEffect(() => {
+    if (paused || reducedMotion || stories.length < 2) return
+    const timer = window.setInterval(() => {
+      const element = strip.current
+      const section = element?.closest('section')
+      if (!element || !section || document.hidden || section.matches(':hover') || section.contains(document.activeElement)) return
+      const bounds = element.getBoundingClientRect()
+      if (bounds.bottom <= 0 || bounds.top >= window.innerHeight) return
+      const maximum = element.scrollWidth - element.clientWidth
+      if (maximum <= 1) return
+      const step = (element.firstElementChild?.getBoundingClientRect().width || 270) + 12
+      element.scrollTo({ left: element.scrollLeft >= maximum - 2 ? 0 : Math.min(maximum, element.scrollLeft + step), behavior: 'smooth' })
+    }, 5000)
+    return () => window.clearInterval(timer)
+  }, [paused, reducedMotion, stories.length])
   function slide(direction: number) {
     strip.current?.scrollBy({ left: direction * 300, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' })
   }
   if (!stories.length) return null
-  return <section className="recommendation-news" aria-label="Подборка новостей"><div className="recommendation-news-heading"><h2>{supporting ? 'В основе рекомендаций' : 'Новости для компании'}</h2><div><button aria-label="Предыдущие новости" onClick={() => slide(-1)}><HugeiconsIcon icon={ArrowLeft01Icon} size={18} /></button><button aria-label="Следующие новости" onClick={() => slide(1)}><HugeiconsIcon icon={ArrowRight01Icon} size={18} /></button></div></div><div className="recommendation-news-strip" ref={strip} tabIndex={0} role="region" aria-label="Новости — прокрутите горизонтально">{stories.map(source => <a key={source.id} href={source.url} target="_blank" rel="noreferrer"><span className="news-strip-source"><SourceLogo id={source.source_id} type={source.source_type} url={source.url} size={16} />{source.source_name}</span><strong>{source.title || 'Публикация в Telegram'}</strong></a>)}</div></section>
+  return <section className="recommendation-news" aria-label="Подборка новостей"><div className="recommendation-news-heading"><h2>{supporting ? 'В основе рекомендаций' : 'Новости для компании'}</h2><div>{!reducedMotion && stories.length > 1 && <button aria-label={paused ? 'Включить автопрокрутку новостей' : 'Приостановить автопрокрутку новостей'} aria-pressed={paused} onClick={() => setPaused(value => !value)}><HugeiconsIcon icon={paused ? PlayIcon : PauseIcon} size={16} aria-hidden="true" /></button>}<button aria-label="Предыдущие новости" onClick={() => slide(-1)}><HugeiconsIcon icon={ArrowLeft01Icon} size={18} /></button><button aria-label="Следующие новости" onClick={() => slide(1)}><HugeiconsIcon icon={ArrowRight01Icon} size={18} /></button></div></div><div className="recommendation-news-strip" ref={strip} tabIndex={0} role="region" aria-label="Новости — прокрутите горизонтально">{stories.map(source => <a key={source.id} href={source.url} target="_blank" rel="noreferrer"><span className="news-strip-source"><SourceLogo id={source.source_id} type={source.source_type} url={source.url} size={16} />{source.source_name}</span><strong>{source.title || 'Публикация в Telegram'}</strong></a>)}</div></section>
 }
