@@ -43,6 +43,15 @@ class Output(BaseModel):
     recommendations: list[Action] = Field(max_length=3)
 
 
+def public_news(article):
+    """Telegram has no headline: use real post text, never a generic label."""
+    result = {k: v for k, v in article.items() if k != 'text'}
+    if not (result.get('title') or '').strip():
+        excerpt = ' '.join((article.get('text') or '').split())
+        result['title'] = excerpt[:180].rstrip() + ('…' if len(excerpt) > 180 else '')
+    return result
+
+
 def context(profile, source=None, topic=None, severity=None):
     if topic is not None and topic not in TOPICS:
         raise HTTPException(422, 'Неизвестная тема')
@@ -125,12 +134,19 @@ def context(profile, source=None, topic=None, severity=None):
                    'catalog': CATALOG, 'model': os.getenv('AI_MODEL', 'gpt-4o-mini').strip()}
         key = hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
         cached = db.conn.execute("SELECT result FROM recommendation_cache WHERE cache_key=? AND created_at>datetime('now','-1 hour')", (key,)).fetchone()
+        cached_result = json.loads(cached['result']) if cached else None
+        if cached_result:
+            # Refresh display fields in older cached results without another model call.
+            by_id = {article['id']: article for article in articles}
+            for action in cached_result.get('recommendations', []):
+                action['sources'] = [public_news(by_id[s['id']]) if s['id'] in by_id else s
+                                     for s in action['sources']]
         public = {'business': business, 'counterparties': relations, 'topics': sorted(topics),
                   'sources': [catalog[s] for s in selected], 'filters': payload['filters'],
                   'candidate_count': len(articles), 'window_days': 30, 'mapping_version': CATEGORY_VERSION,
                   'ai_available': bool(os.getenv('AI_API_KEY') or os.getenv('OPENAI_API_KEY')),
-                  'result': json.loads(cached['result']) if cached else None,
-                  'news_preview': [{k: v for k, v in n.items() if k != 'text'} for n in articles[:10]]}
+                  'result': cached_result,
+                  'news_preview': [public_news(n) for n in articles[:10]]}
         return key, payload, public
     finally:
         db.conn.close()
@@ -230,7 +246,7 @@ def validate_output(output, payload):
         services.add(item.service_id)
         actions.append(item.model_dump(exclude={'news_ids', 'service_id'}) | {
             'service': SERVICES[item.service_id],
-            'sources': [{k: v for k, v in news[i].items() if k != 'text'} for i in dict.fromkeys(item.news_ids)]})
+            'sources': [public_news(news[i]) for i in dict.fromkeys(item.news_ids)]})
     return {'status': 'ready', 'recommendations': actions}
 
 

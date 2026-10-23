@@ -149,3 +149,33 @@ def test_industry_ranking_prefers_specific_evidence():
                {'id':3,'title':'Изменение ключевой ставки','text':'Кредит и инфляция'}]
     ranked = rec.rank_articles(stories, {'industry':'Торговля оптовая зерном'}, {'sectors':[]})
     assert ranked[0]['id'] == 2 and ranked[-1]['id'] == 1
+
+
+def test_untitled_posts_show_content_in_previews_and_existing_cache(dataset, monkeypatch):
+    monkeypatch.setenv('AI_API_KEY', 'test')
+    calls = []
+    def fake(payload):
+        calls.append(payload)
+        return rec.validate_output(output(), payload)
+    monkeypatch.setattr(rec, 'generate', fake)
+    with TestClient(api.app) as client:
+        onboard(client)
+        seed_news()
+        db = api.database()
+        with db.conn:
+            db.conn.execute("UPDATE news SET title='',text=? WHERE id=1", ('  Реальное содержание\n\nпоста о бизнесе. ' * 20,))
+        db.conn.close()
+        preview = client.get('/api/recommendations', headers=HEADERS).json()['news_preview'][0]
+        assert preview['title'].startswith('Реальное содержание поста о бизнесе.')
+        assert len(preview['title']) == 181 and preview['title'].endswith('…')
+        client.post('/api/recommendations', headers=HEADERS)
+        db = api.database()
+        cached = json.loads(db.conn.execute('SELECT result FROM recommendation_cache').fetchone()[0])
+        for action in cached['recommendations']:
+            action['sources'][0]['title'] = ''  # Simulate a pre-fix cache entry.
+        with db.conn:
+            db.conn.execute('UPDATE recommendation_cache SET result=?', (json.dumps(cached),))
+        db.conn.close()
+        result = client.post('/api/recommendations', headers=HEADERS).json()['result']
+        assert all(a['sources'][0]['title'] == preview['title'] for a in result['recommendations'])
+        assert len(calls) == 1  # Display repair does not trigger paid regeneration.
