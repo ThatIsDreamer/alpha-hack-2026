@@ -31,7 +31,7 @@
 .recommendation-news-heading h2{font-size:14px;font-weight:600;letter-spacing:0}
 .recommendation-news-heading>div{display:flex;gap:8px}
 .recommendation-news-heading button{display:flex;align-items:center;justify-content:center;border:0;background:white;border-radius:7px;width:30px;height:30px;padding:0}
-.recommendation-news-strip{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity;overscroll-behavior-x:contain;scrollbar-width:thin;scrollbar-color:#c9cbd0 transparent;padding-bottom:10px}
+.recommendation-news-strip{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:10px}
 .recommendation-news-strip>a{flex:0 0 270px;scroll-snap-align:start;background:white;border-radius:12px;padding:18px;text-decoration:none;color:inherit}
 .news-strip-source{display:flex;align-items:center;gap:7px;font-size:11px;color:#62666c;margin-bottom:10px}
 .recommendation-news-strip strong{font-size:13px;font-weight:500;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
@@ -44,3 +44,5 @@
 .recommendation-heading>div{min-width:0}
 .recommendation-heading p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .recommendation-heading>div{max-width:100%}
+
+.recommendation-news-strip::-webkit-scrollbar{display:none}
