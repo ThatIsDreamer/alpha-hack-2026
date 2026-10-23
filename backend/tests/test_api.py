@@ -6,6 +6,8 @@ from backend.collectors.base import Item
 def test_api_reads_persistence_and_bounds_demo(tmp_path, monkeypatch):
     monkeypatch.setenv('NEWS_DB', str(tmp_path / 'news.sqlite3'))
     monkeypatch.setenv('ENABLE_SCHEDULER', 'false')
+    monkeypatch.delenv('AI_API_KEY', raising=False)
+    monkeypatch.delenv('OPENAI_API_KEY', raising=False)
     def fake_run(db, sources, client, classifier, limit):
         assert limit == 5 and classifier is None
         assert all(s['max_items'] == 5 for s in sources)
@@ -36,3 +38,19 @@ def test_overlapping_run_is_rejected(tmp_path, monkeypatch):
             assert client.post('/api/runs').status_code == 409
         finally:
             lock.close()
+
+
+def test_demo_classifies_when_credentials_exist(tmp_path, monkeypatch):
+    monkeypatch.setenv('NEWS_DB', str(tmp_path / 'news.sqlite3'))
+    monkeypatch.setenv('ENABLE_SCHEDULER', 'false')
+    monkeypatch.setenv('AI_API_KEY', 'test-only')
+    classifier = object()
+    monkeypatch.setattr(api, 'create_classifier', lambda: classifier)
+    def fake_run(db, sources, client, received_classifier, limit):
+        assert received_classifier is classifier
+        assert limit == 5
+        return dict(discovered=0, fetched=0, classified=5, errors=0)
+    monkeypatch.setattr(api, 'run', fake_run)
+    with TestClient(api.app) as client:
+        assert client.post('/api/runs').status_code == 202
+        assert client.get('/api/runs').json()[0]['result']['classified'] == 5

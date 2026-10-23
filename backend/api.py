@@ -60,7 +60,7 @@ def execute(run_id, lock, kind):
         if kind == 'demo':
             sources = [dict(s, max_items=5, max_pages=1) for s in sources]
         classifier = None
-        if kind != 'demo' and (os.getenv('AI_API_KEY') or os.getenv('OPENAI_API_KEY')):
+        if os.getenv('AI_API_KEY') or os.getenv('OPENAI_API_KEY'):
             classifier = create_classifier()
         with httpx.Client(timeout=25, follow_redirects=True, headers={'User-Agent': 'NewsIngest/0.1'}) as client:
             result = run(db, sources, client, classifier, limit=5 if kind == 'demo' else 100)

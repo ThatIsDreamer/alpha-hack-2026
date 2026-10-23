@@ -79,3 +79,18 @@ def test_per_source_limit(tmp_path):
     client = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, text=feed)))
     stats = run(Database(tmp_path / 'news.sqlite3'), [dict(SOURCES[0], max_items=1)], client)
     assert stats['discovered'] == 1
+
+
+def test_model_name_whitespace_is_trimmed(monkeypatch):
+    monkeypatch.setenv('AI_MODEL', ' deepseek/deepseek-v4.1-flash ')
+    assert OpenAIClassifier(client=object()).model == 'deepseek/deepseek-v4.1-flash'
+
+
+def test_deepseek_disables_thinking_for_small_token_budget(monkeypatch):
+    monkeypatch.setenv('AI_MODEL', 'deepseek/deepseek-v4.1-flash')
+    def create(**kwargs):
+        assert kwargs['extra_body'] == {'thinking': {'type': 'disabled'}}
+        assert kwargs['max_completion_tokens'] == 64
+        return SimpleNamespace(choices=[SimpleNamespace(finish_reason='stop', message=SimpleNamespace(content='{"topic":"business","severity":"none"}', refusal=None))])
+    client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(create=create)))
+    assert OpenAIClassifier(client).classify('Company revenue grew') == {'topic':'business','severity':'none'}

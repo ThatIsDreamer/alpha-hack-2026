@@ -109,9 +109,9 @@ The API defaults to the persistent local database backend/data/news.sqlite3.
 Set ENABLE_SCHEDULER=false for local tests without hourly collection.
 
 Endpoints: GET /health, /api/overview, /api/news (source, limit, offset),
-/api/news/{id}, /api/runs; POST /api/runs starts a bounded scrape-only demo job.
+/api/news/{id}, /api/runs; POST /api/runs starts a bounded demo job.
 Demo jobs discover at most 5 entries per enabled source, fetch at most 5 articles,
-and have a global persisted five-minute cooldown. They never call the model.
+and have a global persisted five-minute cooldown. With configured credentials they classify at most 5 pending articles per run.
 Run history records real counts and failures, and interrupted runs on restart.
 
 ## Railway deployment
@@ -160,3 +160,8 @@ from being stored twice across feeds.
   first, maximum 50 links. It is a bounded sample, not exhaustive Russian coverage.
   Live local verification returned HTTP 429; hourly runs retry discovery normally,
   without immediate retry loops. A failed source does not stop other collectors.
+
+Model names are trimmed before requests. For DeepSeek models, thinking is explicitly
+disabled so the 64-token budget goes to the two labels rather than reasoning.
+Demo runs now classify up to 5 pending items when model credentials are configured;
+the persisted five-minute cooldown and one-run-at-a-time lock still apply.

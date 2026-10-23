@@ -20,5 +20,5 @@ Railway service newsroom-web builds from GitHub main with root directory `/front
 The multi-stage Dockerfile uses nginx on port 8080 with SPA fallback, so direct
 links and refreshes work on `/runs` and `/news/:id`.
 
-The public demo trigger is scrape-only, globally limited to one run per five minutes.
+The public demo trigger classifies at most 5 articles when credentials exist and is globally limited to one run per five minutes.
 AI credentials stay on the API service and are never bundled into frontend assets.
